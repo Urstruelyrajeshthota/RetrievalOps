@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@retrievalops/contracts": "*",
-    "@qdrant/js-client": "^1.7.0"
+    "@qdrant/js-client-rest": "^1.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
