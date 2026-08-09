@@ -1,134 +1,165 @@
-# RetrievalOps vs. Alternatives
+# RetrievalOps and Other Retrieval Tools
 
-How RetrievalOps compares to other retrieval solutions.
+How RetrievalOps positions itself alongside existing solutions.
+
+## Positioning
+
+Existing retrieval tools expose powerful but different capabilities:
+- **Vector databases** (Qdrant, Weaviate, Pinecone, Milvus) provide persistent storage and search primitives
+- **RAG frameworks** (LlamaIndex, LangChain) orchestrate retrieval → LLM pipelines
+- **Search engines** (Elasticsearch, OpenSearch) provide keyword and ranking control
+
+**RetrievalOps** aims to provide a portable operational contract that makes these capabilities easier to define, understand, and eventually evaluate.
+
+---
 
 ## vs. LlamaIndex
 
-| Feature | RetrievalOps | LlamaIndex |
-|---------|-------------|-----------|
-| **Focus** | Retrieval orchestration | Full RAG framework |
-| **Storage** | PostgreSQL + pgvector | Multiple (20+) |
-| **Embeddings** | Local + pluggable | API-based (OpenAI, etc) |
-| **Schema DSL** | ✅ Multi-field with weights | ❌ Basic |
-| **Hybrid Search** | ✅ RRF fusion | ✅ Via integration |
-| **Explanations** | ✅ Built-in | ❌ |
-| **Field Weighting** | ✅ Per-field control | ❌ |
-| **Local Inference** | ✅ No API keys | ❌ Requires API |
-| **Cost** | Free (open-source) | Free (but API costs) |
-| **Learning Curve** | Low (focused) | High (comprehensive) |
+LlamaIndex is a comprehensive RAG framework. RetrievalOps is a retrieval orchestration layer.
 
-**Use RetrievalOps if**: You want fine-grained retrieval control with explainability.  
-**Use LlamaIndex if**: You want end-to-end RAG with many integrations.
+| Aspect | RetrievalOps | LlamaIndex |
+|--------|-------------|-----------|
+| **Scope** | Retrieval layer only | End-to-end RAG |
+| **Embedding support** | Local (transformers.js) + pluggable | Local + API providers (OpenAI, etc) |
+| **Storage backends** | PostgreSQL + pgvector | 20+ integrations |
+| **Schema definition** | Entity schema DSL with field config | Basic index configuration |
+| **Hybrid search** | Built-in RRF fusion | Via custom retriever |
+| **Result explanations** | Built-in (matched fields, intent) | Application responsibility |
+| **Field weighting** | Per-field ranking control | Not supported |
+
+**Best for different purposes**:
+- RetrievalOps: Fine-grained retrieval control and explainability
+- LlamaIndex: Full RAG pipeline with many integrations
+
+**They work together**: Use RetrievalOps for retrieval, LlamaIndex for orchestration.
 
 ---
 
 ## vs. Pinecone
 
-| Feature | RetrievalOps | Pinecone |
-|---------|-------------|----------|
-| **Type** | Self-hosted SDK | Managed service |
-| **Cost** | Free (self-hosted) | $0.40/1M queries |
-| **Hybrid Search** | ✅ Native | ✅ Via metadata |
-| **Schema DSL** | ✅ Multi-field | ❌ |
-| **Explainability** | ✅ Full explanations | ❌ Similarity only |
-| **Control** | ✅ Full | ❌ Managed |
-| **Setup Time** | 10 minutes | 5 minutes (cloud) |
-| **Data Privacy** | ✅ Your servers | ❌ Cloud |
-| **Scalability** | ✅ PostgreSQL scale | ✅ Unlimited |
-| **Local Dev** | ✅ Docker | ❌ Cloud-only |
+Pinecone is a managed vector database service. RetrievalOps is a retrieval SDK.
 
-**Use RetrievalOps if**: You want self-hosted, explainable retrieval.  
-**Use Pinecone if**: You want managed, scalable infrastructure.
+| Aspect | RetrievalOps | Pinecone |
+|--------|-------------|----------|
+| **Type** | Self-hosted SDK | Managed service |
+| **Operations** | Self-managed | Fully managed |
+| **Storage** | PostgreSQL + pgvector | Pinecone proprietary |
+| **Hybrid search** | RRF fusion (semantic + keyword) | Keyword filtering + vector search |
+| **Ranking control** | Field-level weights | Global/index level |
+| **Result explanations** | Matched fields, intent detection | Similarity scores only |
+| **Setup** | Docker + PostgreSQL | Cloud console |
+| **Data location** | Your infrastructure | Pinecone cloud |
+| **Pricing model** | Self-hosted costs | Usage-based (vectors, queries) |
+| **Local development** | Full Docker stack | Cloud-only |
+
+**Best for different purposes**:
+- RetrievalOps: Fine-grained control, private infrastructure, explainability
+- Pinecone: Managed service, enterprise scale, operational simplicity
 
 ---
 
 ## vs. Weaviate
 
-| Feature | RetrievalOps | Weaviate |
-|---------|-------------|----------|
-| **Type** | SDK + storage | Vector database |
-| **Learning** | Schema DSL | GraphQL schema |
-| **Setup** | Easy (Docker) | Medium (complex) |
-| **Hybrid** | ✅ RRF fusion | ✅ BM25 fusion |
-| **Field Weights** | ✅ Per-field | ❌ Global |
-| **Explanations** | ✅ Built-in | ❌ |
-| **PostgreSQL** | ✅ Native | ❌ Separate DB |
-| **Cost** | Free | Free/Enterprise |
-| **Community** | Growing | Large |
+Weaviate is a vector database with built-in hybrid search. RetrievalOps is a retrieval orchestration SDK.
 
-**Use RetrievalOps if**: You want simplicity + explainability.  
-**Use Weaviate if**: You want a standalone vector DB.
+| Aspect | RetrievalOps | Weaviate |
+|--------|-------------|----------|
+| **Type** | Retrieval SDK | Vector database |
+| **Storage** | PostgreSQL + pgvector | Weaviate (embedded or standalone) |
+| **Configuration** | Entity schema DSL | GraphQL schema definition |
+| **Hybrid search** | RRF (semantic + keyword) | BM25 fusion (native FTS) |
+| **Ranking control** | Field-level weights | Index-level configuration |
+| **Result scoring** | Explanations + score breakdown | explainScore (available) |
+| **Learning curve** | Focused (retrieval layer) | Steeper (full database) |
+| **Setup** | Docker for PostgreSQL | Docker container or managed |
+| **Deployment** | Any environment | Standalone or cloud |
+| **Integrations** | PostgreSQL ecosystem | Weaviate-specific |
+
+**Best for different purposes**:
+- RetrievalOps: Portable retrieval layer, field-level ranking control, existing infrastructure
+- Weaviate: Standalone vector database, GraphQL API, complete search solution
 
 ---
 
 ## vs. Milvus
 
-| Feature | RetrievalOps | Milvus |
-|---------|-------------|---------|
-| **Type** | SDK framework | Vector database |
-| **Setup** | Very easy | Medium |
-| **Language** | TypeScript | Python-first |
-| **Hybrid** | ✅ RRF | ✅ Filtering |
-| **Schema DSL** | ✅ Multi-field | ❌ |
-| **Explainability** | ✅ Full | ❌ |
-| **Scaling** | Moderate | Excellent |
-| **Community** | Growing | Large (Chinese) |
+Milvus is a vector database optimized for scale. RetrievalOps is a retrieval orchestration SDK.
 
-**Use RetrievalOps if**: You're building in TypeScript/Node.js.  
-**Use Milvus if**: You need massive scale or Python.
+| Aspect | RetrievalOps | Milvus |
+|--------|-------------|--------|
+| **Type** | Retrieval SDK | Vector database |
+| **Primary language** | TypeScript/JavaScript | Python, with SDKs for other languages |
+| **Storage** | PostgreSQL + pgvector | Milvus (embedded or standalone) |
+| **Hybrid search** | RRF fusion | Scalar filtering + vector search |
+| **Ranking control** | Field-level weights | Filtering + similarity scoring |
+| **Result explanations** | Matched fields, intent | Similarity scores |
+| **Scale characteristics** | PostgreSQL limits | Designed for billions of vectors |
+| **Setup complexity** | Docker for PostgreSQL | Docker or Kubernetes deployment |
+| **Use case** | Fine-grained retrieval control | Massive-scale vector search |
+
+**Best for different purposes**:
+- RetrievalOps: TypeScript applications, field-level ranking, explainability
+- Milvus: Massive scale requirements, Python-first workflows
 
 ---
 
 ## vs. Qdrant
 
-| Feature | RetrievalOps | Qdrant |
-|---------|-------------|---------|
-| **Type** | SDK + storage | Vector database |
-| **Language** | TypeScript | Rust (any language) |
-| **Setup** | Easy | Medium |
-| **Hybrid** | ✅ RRF native | ✅ Payload filtering |
-| **Schema DSL** | ✅ Type-safe | ❌ |
-| **Explanations** | ✅ | ❌ |
-| **Field Weights** | ✅ | ❌ |
-| **Performance** | Good | Excellent |
-| **Cloud** | ❌ Self-hosted | ✅ Managed option |
+Qdrant is a high-performance vector database. RetrievalOps is a retrieval orchestration SDK.
 
-**Use RetrievalOps if**: You want explainable retrieval with TypeScript.  
-**Use Qdrant if**: You need high performance or managed cloud.
+| Aspect | RetrievalOps | Qdrant |
+|--------|-------------|--------|
+| **Type** | Retrieval SDK | Vector database |
+| **Language** | TypeScript/JavaScript | Rust, language-agnostic (REST/gRPC) |
+| **Storage** | PostgreSQL + pgvector | Qdrant (embedded or server) |
+| **Hybrid search** | RRF fusion (semantic + keyword) | Multi-vector, named vectors, filtering |
+| **Ranking control** | Field-level weights | Named vectors, payload filtering, scoring |
+| **Result explanations** | Matched fields, intent detection | Similarity scores, multi-vector breakdown |
+| **Performance focus** | PostgreSQL/IVFFlat | HNSW, optimized for scale |
+| **Setup** | Docker + PostgreSQL | Docker container or server |
+| **Deployment options** | Self-hosted | Self-hosted + managed cloud (Qdrant Cloud) |
+| **Client libraries** | TypeScript native | Multiple languages via REST/gRPC |
+
+**Best for different purposes**:
+- RetrievalOps: TypeScript applications, portable schema, field-level ranking control, explainability
+- Qdrant: High-performance vector search, language-agnostic access, managed cloud option
 
 ---
 
-## Summary Matrix
+## Quick Selection Guide
 
-| Dimension | RetrievalOps | LlamaIndex | Pinecone | Weaviate | Milvus | Qdrant |
-|-----------|------------|-----------|----------|----------|--------|--------|
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
-| **Explainability** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐ | ⭐ | ⭐ |
-| **Field Weighting** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐ | ⭐ |
-| **Hybrid Search** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Performance** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Cost** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **TypeScript** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
-| **Learning Curve** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐⭐ |
+| Need | Recommended |
+|------|------------|
+| **Retrieval layer only** | RetrievalOps |
+| **End-to-end RAG** | LlamaIndex |
+| **Managed vector DB** | Pinecone, Qdrant Cloud |
+| **Self-hosted vector DB** | Weaviate, Qdrant, Milvus |
+| **Field-level ranking control** | RetrievalOps |
+| **Explainable results** | RetrievalOps |
+| **High-scale search (1B+ vectors)** | Milvus, Pinecone |
+| **TypeScript-native** | RetrievalOps, LlamaIndex |
+| **Python-first** | LlamaIndex, Milvus |
+| **Language-agnostic** | Qdrant, Weaviate, Milvus |
+| **Lowest operational burden** | Pinecone, Qdrant Cloud |
+| **Maximum control** | RetrievalOps (with PostgreSQL) |
 
 ---
 
 ## When to Use RetrievalOps
 
-✅ **Perfect for**:
-- Building production search systems
-- Needing explainable retrieval decisions
-- Fine-tuning field-level ranking
-- TypeScript/Node.js applications
-- Hybrid dense + keyword search
-- Cost-conscious projects (self-hosted)
-- Privacy-sensitive applications
+**RetrievalOps is designed for**:
+- Applications needing field-level ranking control
+- Systems requiring explainable search results
+- TypeScript/Node.js environments
+- Hybrid dense + keyword retrieval
+- Privacy-sensitive deployments (self-hosted)
+- Cost-optimized architectures
 
-❌ **Not ideal for**:
-- Rapid prototyping (use LlamaIndex)
-- Multi-language support (use Pinecone)
-- No ops budget (use managed Qdrant/Pinecone)
-- Python-first projects (use Milvus)
+**Consider alternatives if**:
+- You need end-to-end RAG orchestration (→ LlamaIndex)
+- You prefer fully managed infrastructure (→ Pinecone, Qdrant Cloud)
+- You need maximum scale (→ Milvus, Pinecone)
+- You require language-agnostic APIs (→ Qdrant, Weaviate)
 
 ---
 
@@ -145,46 +176,53 @@ RetrievalOps integrates with LlamaIndex! Use RetrievalOps for retrieval, LlamaIn
 
 ---
 
-## Feature Comparison Details
+## Portable Retrieval Contract
 
-### Entity Schema & Configuration
+The core insight behind RetrievalOps is that a portable **retrieval contract** enables:
 
-**RetrievalOps**:
+1. **Declarative configuration** — Define retrieval intent in schema, not code
+2. **Operational clarity** — Understanding why results ranked helps debugging
+3. **Future composability** — Swap storage backends without changing retrieval logic
+4. **Evaluation frameworks** — Measure retrieval quality consistently
+
 ```typescript
+// RetrievalOps: Schema defines retrieval intent
 const entity = defineEntity({
   name: "ticket",
   fields: {
     title: { retrieval: ["semantic", "keyword"], weight: 1.2 },
-    body: { retrieval: ["semantic"], weight: 0.9 }
+    rootCause: { retrieval: ["semantic"], weight: 1.4 }
   }
 });
+
+// Search tells you why results ranked
+const results = await retrieval.search({ entity, query: "..." });
+results.results[0].explanation; // { intent, matchedFields, scoreBreakdown }
 ```
 
-**LlamaIndex**:
-```python
-from llama_index import Document, VectorStoreIndex
-docs = [Document(text=...)]
-index = VectorStoreIndex.from_documents(docs)
-```
+Other tools solve the storage or orchestration problem well. RetrievalOps focuses on the contract that sits between your application logic and retrieval infrastructure.
 
-RetrievalOps gives finer control, LlamaIndex is simpler.
+### Hybrid Search Approaches
 
-### Hybrid Search Implementation
+Different tools implement hybrid search differently:
 
 **RetrievalOps**:
-- Native RRF (Reciprocal Rank Fusion)
-- Score normalization
-- Field weighting
+- RRF fusion combining semantic + keyword signals
+- Per-field ranking weights
+- Built into retrieval orchestration layer
 
 **Pinecone**:
-- Requires metadata filtering
-- No fusion algorithm
-- Limited ranking control
+- Vector similarity + metadata filtering
+- Scoring via vector distance only
 
 **Qdrant**:
-- Custom scoring
-- Payload filtering
-- More complex setup
+- Named vectors for multi-vector queries
+- Payload filtering + custom scoring
+- Multi-vector reranking
+
+**Weaviate**:
+- BM25 keyword search + vector similarity
+- explainScore for result explanation
 
 ---
 
