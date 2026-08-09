@@ -1,0 +1,32 @@
+{
+  "name": "@retrievalops/contracts",
+  "version": "0.1.0",
+  "description": "Type interfaces and contracts for RetrievalOps adapters and providers",
+  "license": "Apache-2.0",
+  "author": "RetrievalOps Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/retrievalops/retrievalops.git",
+    "directory": "packages/contracts"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

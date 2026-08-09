@@ -1,0 +1,53 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "tsconfig.json",
+    ".eslintrc.json",
+    ".prettierrc.json"
+  ],
+  "tasks": {
+    "build": {
+      "description": "Build project",
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "cache": true
+    },
+    "test": {
+      "description": "Run tests",
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"],
+      "cache": false,
+      "inputs": ["src/**", "tests/**", "**/*.test.ts", "**/*.spec.ts"]
+    },
+    "test:security": {
+      "description": "Run security tests",
+      "dependsOn": ["build"],
+      "cache": false,
+      "inputs": ["src/**", "tests/**", "**/*.security.test.ts"]
+    },
+    "test:coverage": {
+      "description": "Run tests with coverage",
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"],
+      "cache": false
+    },
+    "lint": {
+      "description": "Lint code",
+      "outputs": [],
+      "cache": false
+    },
+    "format": {
+      "description": "Format code",
+      "outputs": [],
+      "cache": false
+    },
+    "type-check": {
+      "description": "Type check TypeScript",
+      "cache": false
+    },
+    "clean": {
+      "description": "Clean build artifacts",
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,21 @@
+﻿npm : npm warn Unknown project config "publish-attestations". This will stop working in the next major version of npm. 
+See `npm help npmrc` for supported config options.
+At line:4 char:1
++ npm run build 2>&1 | tee build-log.txt
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> @retrievalops/core@0.1.0 build
+> tsc
+
+'tsc' is not recognized as an internal or external command,
+operable program or batch file.
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\RetrievalOps\packages\core
+npm error workspace @retrievalops/core@0.1.0
+npm error location D:\RetrievalOps\packages\core
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc

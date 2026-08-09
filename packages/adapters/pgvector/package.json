@@ -1,0 +1,48 @@
+{
+  "name": "@retrievalops/pgvector",
+  "version": "0.1.0",
+  "description": "PostgreSQL pgvector adapter for RetrievalOps",
+  "license": "Apache-2.0",
+  "author": "RetrievalOps Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/retrievalops/retrievalops.git",
+    "directory": "packages/adapters/pgvector"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:integration": "vitest run --grep 'integration'",
+    "lint": "eslint src --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
+  },
+  "dependencies": {
+    "@retrievalops/contracts": "*",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@retrievalops/core": "^0.1.0 || ^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
+
+

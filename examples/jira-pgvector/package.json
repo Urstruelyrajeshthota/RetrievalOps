@@ -1,0 +1,41 @@
+{
+  "name": "@retrievalops/examples-jira-pgvector",
+  "version": "0.1.0",
+  "description": "End-to-end Jira ticket search example using RetrievalOps with PostgreSQL + pgvector",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./entity": "./src/entity.ts",
+    "./index-tickets": "./src/index-tickets.ts",
+    "./search-tickets": "./src/search-tickets.ts"
+  },
+  "scripts": {
+    "index": "tsx src/index-tickets.ts",
+    "search": "tsx src/search-tickets.ts",
+    "dev": "npm run index && npm run search",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@retrievalops/core": "*",
+    "@retrievalops/pgvector": "*",
+    "@retrievalops/local": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.0"
+  },
+  "keywords": [
+    "retrieval",
+    "retrieval-augmented-generation",
+    "rag",
+    "semantic-search",
+    "embedding",
+    "pgvector",
+    "jira",
+    "example"
+  ],
+  "author": "RetrievalOps Contributors",
+  "license": "Apache-2.0"
+}

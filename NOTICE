@@ -1,0 +1,14 @@
+RetrievalOps
+Copyright 2026 Rajesh Thota
+
+This product is licensed under the Apache License, Version 2.0.
+
+The following components are included:
+
+- Xenova/transformers.js
+  Licensed under the Apache License, Version 2.0
+  https://github.com/xenova/transformers.js
+
+- sentence-transformers (reference implementation)
+  Licensed under Apache License, Version 2.0
+  https://github.com/UKPLab/sentence-transformers
