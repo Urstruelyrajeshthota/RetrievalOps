@@ -1,5 +1,5 @@
 {
-  "name": "@rajeshthota/retrievalops-local",
+  "name": "@itsrajeshthota/retrievalops-local",
   "version": "0.1.0",
   "description": "Local embedding provider using transformers.js for RetrievalOps",
   "license": "Apache-2.0",
@@ -24,7 +24,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@rajeshthota/retrievalops-contracts": "*",
+    "@itsrajeshthota/retrievalops-contracts": "*",
     "@xenova/transformers": "^2.6.0"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 {
-  "name": "@rajeshthota/retrievalops-core",
+  "name": "@itsrajeshthota/retrievalops-core",
   "version": "0.1.0",
   "description": "RetrievalOps core SDK for planning, executing, and evaluating retrieval",
   "license": "Apache-2.0",
@@ -27,7 +27,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@rajeshthota/retrievalops-contracts": "*",
+    "@itsrajeshthota/retrievalops-contracts": "*",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
