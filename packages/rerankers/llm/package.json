@@ -1,6 +1,6 @@
 {
-  "name": "@retrievalops/llm",
-  "version": "0.1.0",
+  "name": "@itsrajeshthota/retrievalops-llm",
+  "version": "0.2.0",
   "private": true,
   "description": "LLM-based reranker for RetrievalOps",
   "license": "Apache-2.0",
@@ -25,7 +25,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@retrievalops/contracts": "*"
+    "@itsrajeshthota/retrievalops-contracts": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -34,7 +34,7 @@
     "vitest": "^1.0.0"
   },
   "peerDependencies": {
-    "@retrievalops/core": "^0.1.0 || ^1.0.0"
+    "@itsrajeshthota/retrievalops-core": "^0.1.0 || ^1.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

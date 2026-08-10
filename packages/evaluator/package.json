@@ -1,6 +1,6 @@
 {
-  "name": "@retrievalops/evaluator",
-  "version": "0.1.0",
+  "name": "@itsrajeshthota/retrievalops-evaluator",
+  "version": "0.2.0",
   "private": true,
   "description": "Evaluation framework for measuring retrieval quality",
   "license": "Apache-2.0",
@@ -26,8 +26,8 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@retrievalops/contracts": "*",
-    "@retrievalops/core": "*"
+    "@itsrajeshthota/retrievalops-contracts": "*",
+    "@itsrajeshthota/retrievalops-core": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
