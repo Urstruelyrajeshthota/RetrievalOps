@@ -298,6 +298,22 @@ export interface BatchIndexResult {
 }
 
 /**
+ * Adapter capabilities - declares what features each backend supports
+ * Allows applications to discover backend capabilities and adjust behavior accordingly
+ */
+export interface AdapterCapabilities {
+  dense: boolean;
+  keyword: boolean;
+  hybrid: boolean;
+  nativeExplain: boolean;
+  multiTenant: boolean;
+  transactions: boolean;
+  filtering: boolean;
+  partitioning: boolean;
+  clustering: boolean;
+}
+
+/**
  * SearchAdapter Interface
  *
  * Unified abstraction for vector search across storage backends.
@@ -309,6 +325,7 @@ export interface BatchIndexResult {
  * - Field-level ranking via weights
  * - Multi-tenant ready
  * - Observable (latency, counts, etc.)
+ * - Capability detection via getCapabilities()
  */
 export interface SearchAdapter {
   /**
@@ -350,6 +367,12 @@ export interface SearchAdapter {
    * Get adapter statistics
    */
   getStats(): Promise<AdapterStats>;
+
+  /**
+   * Get adapter capabilities (what features this backend actually supports)
+   * Applications should check before using backend-specific features
+   */
+  getCapabilities(): Promise<AdapterCapabilities>;
 
   /**
    * Close connections and cleanup

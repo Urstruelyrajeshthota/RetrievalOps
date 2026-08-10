@@ -80,20 +80,11 @@ export class SearchAdapterFactory {
 
   /**
    * Create from environment variables
+   * Automatically configures adapter from backend-specific env vars
    */
-  async createFromEnv(typeVar = 'ADAPTER_TYPE', configVar = 'ADAPTER_CONFIG'): Promise<SearchAdapter> {
-    const type = process.env[typeVar];
-    const configStr = process.env[configVar];
-
-    if (!type) {
-      throw new Error(`Environment variable ${typeVar} not set`);
-    }
-
-    if (!configStr) {
-      throw new Error(`Environment variable ${configVar} not set`);
-    }
-
-    const config = JSON.parse(configStr);
+  async createFromEnv(typeVar = 'ADAPTER_TYPE'): Promise<SearchAdapter> {
+    const type = getAdapterTypeFromEnv();
+    const config = AdapterConfigs.fromEnv(type);
     return await this.create(type, config);
   }
 }
