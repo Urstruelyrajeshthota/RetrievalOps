@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "@itsrajeshthota/retrievalops-milvus",
   "version": "0.2.1",
   "description": "Milvus adapter for RetrievalOps - Open-source distributed vector database",
@@ -27,3 +27,4 @@
     "node": ">=18.0.0"
   }
 }
+

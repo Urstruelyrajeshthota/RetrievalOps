@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "@itsrajeshthota/retrievalops-evaluator",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Evaluation framework for measuring retrieval quality",
   "license": "Apache-2.0",
@@ -39,4 +39,5 @@
     "node": ">=18.0.0"
   }
 }
+
 
