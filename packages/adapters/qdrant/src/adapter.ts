@@ -20,6 +20,7 @@ import type {
   HealthStatus,
   AdapterStats,
   SearchCandidate,
+  AdapterCapabilities,
 } from '@retrievalops/contracts';
 import { QdrantAdapterConfig } from './types';
 
@@ -473,6 +474,23 @@ export class QdrantAdapter implements SearchAdapter {
     } catch (error) {
       throw new Error(`Failed to get adapter stats: ${error}`);
     }
+  }
+
+  /**
+   * Get adapter capabilities
+   */
+  async getCapabilities(): Promise<AdapterCapabilities> {
+    return {
+      dense: true,           // Native HNSW vector search
+      keyword: true,         // Sparse vector search (BM25)
+      hybrid: true,          // Native RRF (Reciprocal Rank Fusion) hybrid search
+      nativeExplain: false,  // No query plan explanation available
+      multiTenant: true,     // Partition-based isolation
+      transactions: false,   // No ACID transactions
+      filtering: true,       // Payload filter expressions
+      partitioning: true,    // Native sharding support
+      clustering: true,      // Distributed cluster support
+    };
   }
 
   /**

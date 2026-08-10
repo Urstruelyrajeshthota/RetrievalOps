@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "@itsrajeshthota/retrievalops-core",
-  "version": "0.2.1",
+  "version": "0.2.1.1",
   "description": "RetrievalOps core SDK for planning, executing, and evaluating retrieval",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",
@@ -41,3 +41,4 @@
     "node": ">=18.0.0"
   }
 }
+

@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-cli",
-  "version": "0.2.1",
+  "version": "0.2.1.1",
   "private": true,
   "description": "Command-line interface for RetrievalOps",
   "license": "Apache-2.0",
@@ -43,5 +43,6 @@
     "node": ">=18.0.0"
   }
 }
+
 
 

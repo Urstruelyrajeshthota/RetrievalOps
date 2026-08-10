@@ -22,6 +22,7 @@ import type {
   SearchCandidate,
   BatchIndexRequest,
   BatchIndexResult,
+  AdapterCapabilities,
 } from '@retrievalops/contracts';
 import { PgVectorAdapterConfig, VectorRecord, SearchOptions } from './types';
 import { SchemaManager } from './schema';
@@ -400,6 +401,23 @@ export class PgVectorAdapter implements SearchAdapter {
     } catch (error) {
       throw new Error(`Failed to get adapter stats: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Get adapter capabilities
+   */
+  async getCapabilities(): Promise<AdapterCapabilities> {
+    return {
+      dense: true,           // Full HNSW/IVFFlat vector search
+      keyword: true,         // PostgreSQL full-text search (tsvector)
+      hybrid: true,          // Composable - can combine dense + keyword queries
+      nativeExplain: true,   // EXPLAIN ANALYZE available
+      multiTenant: true,     // Schemas + tenantId in metadata
+      transactions: true,    // PostgreSQL ACID transactions
+      filtering: true,       // SQL WHERE clauses for advanced filtering
+      partitioning: true,    // Schema-based partitioning
+      clustering: false,     // Single-node (can be fronted by pgBouncer/PgCat)
+    };
   }
 
   /**

@@ -11,6 +11,7 @@ import {
   DeleteResult,
   HealthStatus,
   AdapterStats,
+  AdapterCapabilities,
 } from '@itsrajeshthota/retrievalops-contracts';
 import { WeaviateAdapterConfig } from './types';
 
@@ -162,6 +163,20 @@ export class WeaviateAdapter implements SearchAdapter {
       backend: this.getBackendType(),
       version: await this.getVersion(),
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  async getCapabilities(): Promise<AdapterCapabilities> {
+    return {
+      dense: true,           // Native dense vector search via nearVector
+      keyword: true,         // Native BM25 keyword search
+      hybrid: false,         // NOT implemented in v0.2.1 - coming in v0.2.2
+      nativeExplain: false,  // No query plan explanation available
+      multiTenant: true,     // Can use object properties for tenant isolation
+      transactions: false,   // No ACID transactions
+      filtering: true,       // Where clauses in GraphQL
+      partitioning: false,   // No native partitioning
+      clustering: true,      // Distributed cluster support
     };
   }
 

@@ -11,6 +11,7 @@ import {
   DeleteResult,
   HealthStatus,
   AdapterStats,
+  AdapterCapabilities,
 } from '@itsrajeshthota/retrievalops-contracts';
 import { MilvusAdapterConfig } from './types';
 
@@ -204,6 +205,22 @@ export class MilvusAdapter implements SearchAdapter {
       backend: this.getBackendType(),
       version: await this.getVersion(),
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  async getCapabilities(): Promise<AdapterCapabilities> {
+    // EXPERIMENTAL: Milvus in v0.2.1 is API contract only - no real database integration
+    // Real database operations and persistence planned for v0.2.2
+    return {
+      dense: false,          // Not implemented in v0.2.1 (mock only)
+      keyword: false,        // Not implemented in v0.2.1 (mock only)
+      hybrid: false,         // Not implemented in v0.2.1
+      nativeExplain: false,  // Not implemented in v0.2.1
+      multiTenant: false,    // Partitioning structure defined but not functional
+      transactions: false,   // Not implemented in v0.2.1
+      filtering: false,      // Expression filter code present but not connected to DB
+      partitioning: false,   // Partition creation code present but not functional
+      clustering: false,     // Not implemented in v0.2.1
     };
   }
 
