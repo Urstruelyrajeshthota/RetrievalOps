@@ -11,11 +11,13 @@ export class SchemaManager {
   private pool: Pool;
   private schema: string;
   private tableName: string;
+  private config: PgVectorAdapterConfig;
 
   constructor(pool: Pool, config: PgVectorAdapterConfig) {
     this.pool = pool;
     this.schema = config.schema || 'retrieval_ops';
     this.tableName = config.tableName || 'vectors';
+    this.config = config;
   }
 
   /**
@@ -69,6 +71,7 @@ export class SchemaManager {
    */
   private async createIndexes(client: any): Promise<void> {
     const indexPrefix = `idx_${this.tableName}`;
+    const strategy = this.config.indexingStrategy || 'ivfflat';
 
     // Entity lookup index
     await client.query(`
@@ -76,13 +79,31 @@ export class SchemaManager {
       ON ${this.schema}.${this.tableName} (entity_type, entity_id);
     `);
 
-    // Vector similarity index (ivfflat for cosine)
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS ${indexPrefix}_vector_cosine
-      ON ${this.schema}.${this.tableName}
-      USING ivfflat (vector vector_cosine_ops)
-      WITH (lists = 100);
-    `);
+    // Vector similarity index
+    if (strategy === 'hnsw') {
+      // HNSW index for cosine distance (v0.2.0+, 4-10x faster)
+      const m = this.config.hnsw?.m ?? 16;
+      const efConstruction = this.config.hnsw?.efConstruction ?? 200;
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS ${indexPrefix}_vector_cosine
+        ON ${this.schema}.${this.tableName}
+        USING hnsw (vector vector_cosine_ops)
+        WITH (m = ${m}, ef_construction = ${efConstruction});
+      `);
+
+      console.log(`ℹ️  HNSW index created (m=${m}, ef_construction=${efConstruction})`);
+    } else {
+      // IVFFlat index for cosine distance (v0.1.0, default)
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS ${indexPrefix}_vector_cosine
+        ON ${this.schema}.${this.tableName}
+        USING ivfflat (vector vector_cosine_ops)
+        WITH (lists = 100);
+      `);
+
+      console.log(`ℹ️  IVFFlat index created (strategy=ivfflat)`);
+    }
 
     // Content hash index (for deduplication)
     await client.query(`
