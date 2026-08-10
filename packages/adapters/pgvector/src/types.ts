@@ -51,8 +51,9 @@ export interface PgVectorAdapterConfig {
   autoCreateSchema?: boolean;
 
   /**
-   * Indexing strategy: 'ivfflat' (v0.1.0, default) or 'hnsw' (v0.2.0+).
+   * Indexing strategy: 'ivfflat' (v0.1.0) or 'hnsw' (v0.2.0+, default).
    * HNSW provides better performance (4-10x faster) with slightly larger index size.
+   * Default: 'hnsw' for v0.2.0+
    */
   indexingStrategy?: 'ivfflat' | 'hnsw';
 

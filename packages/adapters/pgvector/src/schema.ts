@@ -71,7 +71,7 @@ export class SchemaManager {
    */
   private async createIndexes(client: any): Promise<void> {
     const indexPrefix = `idx_${this.tableName}`;
-    const strategy = this.config.indexingStrategy || 'ivfflat';
+    const strategy = this.config.indexingStrategy || 'hnsw';
 
     // Entity lookup index
     await client.query(`
@@ -94,7 +94,7 @@ export class SchemaManager {
 
       console.log(`ℹ️  HNSW index created (m=${m}, ef_construction=${efConstruction})`);
     } else {
-      // IVFFlat index for cosine distance (v0.1.0, default)
+      // IVFFlat index for cosine distance (v0.1.0 compatibility, legacy)
       await client.query(`
         CREATE INDEX IF NOT EXISTS ${indexPrefix}_vector_cosine
         ON ${this.schema}.${this.tableName}
@@ -102,7 +102,7 @@ export class SchemaManager {
         WITH (lists = 100);
       `);
 
-      console.log(`ℹ️  IVFFlat index created (strategy=ivfflat)`);
+      console.log(`ℹ️  IVFFlat index created (legacy strategy, consider upgrading to HNSW)`);
     }
 
     // Content hash index (for deduplication)

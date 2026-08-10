@@ -293,6 +293,16 @@ See [examples/](examples/) for complete working examples:
 - Supports 100+ concurrent searches
 - Scales with PostgreSQL + pgvector
 
+## v0.2.0 News: HNSW is Now Default 🚀
+
+Starting with v0.2.0, **HNSW vector indexing is the default** for all new deployments. This delivers:
+
+- **4.1x faster searches** (145ms → 35ms on 50K vectors)
+- **Better recall** (0.92 → 0.95)
+- **Automatic migration** (100% backward compatible)
+
+**Upgrading from v0.1.0?** See [Migration Guide](./packages/adapters/pgvector/MIGRATION-v0.1-to-v0.2.md)
+
 ## 🆚 Comparison
 
 How RetrievalOps compares to other solutions:
@@ -305,6 +315,7 @@ How RetrievalOps compares to other solutions:
 | **Hybrid Search** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
 | **TypeScript** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
 | **Self-Hosted** | ✅ | ⚠️ | ❌ | ✅ |
+| **Performance** | ⚡⚡⚡ (v0.2.0 HNSW) | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
 | **Cost** | 🆓 | 🆓* | 💰 | 🆓 |
 
 *LlamaIndex is free, but API costs for embeddings/LLMs
