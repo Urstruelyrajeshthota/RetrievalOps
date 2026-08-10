@@ -1,0 +1,1 @@
+# Milvus Setup\n\n## Quick Start\n\n### Docker Compose\n\n```bash\ndocker-compose up -d\n```\n\n### Configuration\n\n```typescript\nconst adapter = new MilvusAdapter({\n  host: 'localhost',\n  port: 19530,\n  collectionName: 'documents',\n  vectorDim: 384,\n});\n\n await adapter.initialize();\n```

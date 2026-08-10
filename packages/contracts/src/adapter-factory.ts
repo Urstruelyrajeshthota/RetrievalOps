@@ -100,36 +100,56 @@ export class SearchAdapterFactory {
 
 /**
  * Default factory with built-in adapters
+ * Supports 4 backends: PostgreSQL, Qdrant, Weaviate, Milvus
  */
 export async function createDefaultFactory(): Promise<SearchAdapterFactory> {
   const factory = new SearchAdapterFactory();
 
-  // Register PostgreSQL adapter
+  // Register PostgreSQL adapter (vertical scaling, ACID)
   factory.register('postgresql', async (config) => {
     const { PgVectorAdapter } = await import('@itsrajeshthota/retrievalops-pgvector');
     return new PgVectorAdapter(config);
   });
 
-  // Register Qdrant adapter
+  // Register Qdrant adapter (horizontal scaling, native HNSW)
   factory.register('qdrant', async (config) => {
     const { QdrantAdapter } = await import('@itsrajeshthota/retrievalops-qdrant');
     return new QdrantAdapter(config);
+  });
+
+  // Register Weaviate adapter (GraphQL, hybrid search)
+  factory.register('weaviate', async (config) => {
+    const { WeaviateAdapter } = await import('@itsrajeshthota/retrievalops-weaviate');
+    return new WeaviateAdapter(config);
+  });
+
+  // Register Milvus adapter (distributed, massive scale)
+  factory.register('milvus', async (config) => {
+    const { MilvusAdapter } = await import('@itsrajeshthota/retrievalops-milvus');
+    return new MilvusAdapter(config);
   });
 
   return factory;
 }
 
 /**
+ * Supported adapter types
+ */
+export type AdapterType = 'postgresql' | 'qdrant' | 'weaviate' | 'milvus';
+
+/**
  * Environment-based adapter selection helper
  */
-export function getAdapterTypeFromEnv(): 'postgresql' | 'qdrant' {
+export function getAdapterTypeFromEnv(): AdapterType {
   const type = process.env.ADAPTER_TYPE?.toLowerCase() || 'postgresql';
 
-  if (type !== 'postgresql' && type !== 'qdrant') {
-    throw new Error(`Invalid ADAPTER_TYPE: ${type}. Must be 'postgresql' or 'qdrant'`);
+  if (!['postgresql', 'qdrant', 'weaviate', 'milvus'].includes(type)) {
+    throw new Error(
+      `Invalid ADAPTER_TYPE: ${type}. Must be 'postgresql', 'qdrant', 'weaviate', or 'milvus'`
+    );
   }
 
-  return type as 'postgresql' | 'qdrant';
+  return type as AdapterType;
 }
 
 /**
@@ -162,14 +182,47 @@ export const AdapterConfigs = {
   },
 
   /**
+   * Weaviate configuration from environment
+   */
+  weaviateFromEnv(): Record<string, any> {
+    return {
+      url: process.env.WEAVIATE_URL || 'http://localhost:8080',
+      className: process.env.WEAVIATE_CLASS || 'Document',
+      apiKey: process.env.WEAVIATE_API_KEY,
+      vectorDim: parseInt(process.env.VECTOR_SIZE || '384'),
+      autoCreate: process.env.AUTO_CREATE !== 'false',
+    };
+  },
+
+  /**
+   * Milvus configuration from environment
+   */
+  milvusFromEnv(): Record<string, any> {
+    return {
+      host: process.env.MILVUS_HOST || 'localhost',
+      port: parseInt(process.env.MILVUS_PORT || '19530'),
+      database: process.env.MILVUS_DATABASE || 'default',
+      collectionName: process.env.MILVUS_COLLECTION || 'documents',
+      vectorDim: parseInt(process.env.VECTOR_SIZE || '384'),
+      indexType: process.env.MILVUS_INDEX_TYPE || 'HNSW',
+      metricType: process.env.MILVUS_METRIC || 'COSINE',
+      autoCreate: process.env.AUTO_CREATE !== 'false',
+    };
+  },
+
+  /**
    * Get appropriate config based on adapter type
    */
-  fromEnv(adapterType: 'postgresql' | 'qdrant'): Record<string, any> {
+  fromEnv(adapterType: AdapterType): Record<string, any> {
     switch (adapterType) {
       case 'postgresql':
         return this.postgresFromEnv();
       case 'qdrant':
         return this.qdrantFromEnv();
+      case 'weaviate':
+        return this.weaviateFromEnv();
+      case 'milvus':
+        return this.milvusFromEnv();
       default:
         throw new Error(`Unknown adapter type: ${adapterType}`);
     }

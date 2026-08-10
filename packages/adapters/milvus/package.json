@@ -1,7 +1,7 @@
 {
-  "name": "@itsrajeshthota/retrievalops-weaviate",
+  "name": "@itsrajeshthota/retrievalops-milvus",
   "version": "0.2.1",
-  "description": "Weaviate adapter for RetrievalOps - GraphQL-based vector database with native FTS",
+  "description": "Milvus adapter for RetrievalOps - Open-source distributed vector database",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -11,12 +11,12 @@
     "lint": "eslint src --ext .ts",
     "clean": "rm -rf dist"
   },
-  "keywords": ["weaviate", "vector-database", "retrieval", "search", "graphql"],
+  "keywords": ["milvus", "vector-database", "retrieval", "search", "distributed"],
   "author": "RetrievalOps Contributors",
   "license": "Apache-2.0",
   "dependencies": {
     "@itsrajeshthota/retrievalops-contracts": "*",
-    "weaviate-ts-client": "^1.3.0"
+    "@zilliz/milvus2-sdk-node": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
