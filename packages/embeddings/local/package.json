@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-local",
-  "version": "0.2.1.1",
+  "version": "0.2.2",
   "description": "Local embedding provider using transformers.js for RetrievalOps",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",
@@ -40,6 +40,7 @@
     "node": ">=18.0.0"
   }
 }
+
 
 
 

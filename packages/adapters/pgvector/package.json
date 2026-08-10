@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-pgvector",
-  "version": "0.2.1.1",
+  "version": "0.2.2",
   "description": "PostgreSQL pgvector adapter for RetrievalOps",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",
@@ -43,6 +43,7 @@
     "node": ">=18.0.0"
   }
 }
+
 
 
 

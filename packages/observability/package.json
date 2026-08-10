@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-observability",
-  "version": "0.2.1.1",
+  "version": "0.2.2",
   "private": true,
   "description": "OpenTelemetry integration for RetrievalOps",
   "license": "Apache-2.0",
@@ -44,6 +44,7 @@
     "node": ">=18.0.0"
   }
 }
+
 
 
 

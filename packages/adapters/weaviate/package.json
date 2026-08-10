@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-weaviate",
-  "version": "0.2.1.1",
+  "version": "0.2.2",
   "description": "Weaviate adapter for RetrievalOps - GraphQL-based vector database with native FTS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,5 +27,6 @@
     "node": ">=18.0.0"
   }
 }
+
 
 
