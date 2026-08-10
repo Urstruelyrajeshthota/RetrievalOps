@@ -1,6 +1,7 @@
 {
   "name": "example-document-search",
   "version": "0.1.0",
+  "private": true,
   "description": "Multi-tenant document search example with RetrievalOps",
   "license": "Apache-2.0",
   "private": true,

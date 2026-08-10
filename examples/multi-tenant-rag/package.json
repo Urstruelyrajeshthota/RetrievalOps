@@ -1,6 +1,7 @@
 {
   "name": "example-multi-tenant-rag",
   "version": "0.1.0",
+  "private": true,
   "description": "Multi-tenant RAG with tenant isolation using RetrievalOps",
   "license": "Apache-2.0",
   "private": true,

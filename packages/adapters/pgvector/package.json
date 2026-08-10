@@ -1,5 +1,5 @@
 {
-  "name": "@retrievalops/pgvector",
+  "name": "@rajeshthota/retrievalops-pgvector",
   "version": "0.1.0",
   "description": "PostgreSQL pgvector adapter for RetrievalOps",
   "license": "Apache-2.0",
@@ -26,7 +26,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@retrievalops/contracts": "*",
+    "@rajeshthota/retrievalops-contracts": "*",
     "pg": "^8.11.0"
   },
   "devDependencies": {
@@ -37,7 +37,7 @@
     "vitest": "^1.0.0"
   },
   "peerDependencies": {
-    "@retrievalops/core": "^0.1.0 || ^1.0.0"
+    "@rajeshthota/retrievalops-core": "^0.1.0 || ^1.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,6 +1,7 @@
 {
   "name": "@retrievalops/llm",
   "version": "0.1.0",
+  "private": true,
   "description": "LLM-based reranker for RetrievalOps",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",

@@ -1,5 +1,5 @@
 {
-  "name": "@retrievalops/contracts",
+  "name": "@rajeshthota/retrievalops-contracts",
   "version": "0.1.0",
   "description": "Type interfaces and contracts for RetrievalOps adapters and providers",
   "license": "Apache-2.0",

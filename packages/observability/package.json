@@ -1,6 +1,7 @@
 {
   "name": "@retrievalops/observability",
   "version": "0.1.0",
+  "private": true,
   "description": "OpenTelemetry integration for RetrievalOps",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",
