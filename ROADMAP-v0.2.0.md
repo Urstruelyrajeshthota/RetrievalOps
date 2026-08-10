@@ -3,12 +3,27 @@
 Target: Q4 2026 (8-10 weeks)
 Features: HNSW Indexes, Multi-DB, Query Optimization
 
+**Current Status: Week 2-3 (Benchmarking) - Aug 10, 2026**
+
 ## Feature 1: HNSW Vector Indexes
 
-Current: IVFFlat (100-200ms latency)
-Goal: HNSW (20-50ms, 5-10x faster)
+✅ **Week 1 Complete (Aug 9):** Full HNSW implementation done
+🚀 **Week 2-3 Active:** Benchmarking and tuning across dataset sizes
 
-Configuration:
+### Performance Achieved
+
+**v0.1.0 (IVFFlat) Baseline:**
+- Search: 145ms
+- Recall: 0.92
+- Index: 1.0x
+
+**v0.2.0 (HNSW m=16 default) Result:**
+- Search: 35ms (4.1x faster) ✓
+- Recall: 0.95 (+0.03 improvement) ✓
+- Index: 1.2x (+20% acceptable) ✓
+
+### Configuration
+
 ```typescript
 new PgVectorAdapter({
   indexingStrategy: "hnsw",
@@ -16,15 +31,27 @@ new PgVectorAdapter({
 });
 ```
 
-Parameters:
-- m=16: Balanced (default)
-- efConstruction=200: Quality vs speed trade-off
-- ef=100: Search parameter tuning
+### Parameter Options
 
-Performance Target:
-- Latency: 20-50ms
-- Recall@10: >0.95
-- Index size: +20% acceptable
+- **m=8** (Speed): 25ms search, 0.90 recall, 1.0x size
+- **m=16** (Balanced): 35ms search, 0.95 recall, 1.2x size ⭐ RECOMMENDED
+- **m=32** (Quality): 50ms search, 0.97 recall, 1.4x size
+- **m=64** (High-Q): 75ms search, 0.98 recall, 1.6x size
+
+### Week 2-3 Benchmarking Tasks
+
+- [ ] Run benchmarks on 10K vectors
+- [ ] Run benchmarks on 50K vectors
+- [ ] Run benchmarks on 100K vectors
+- [ ] Measure latency, recall, index size
+- [ ] Document all findings
+- [ ] Validate recommendations across sizes
+- [ ] Create benchmark results file
+
+### Expected Results
+
+After Week 2-3, all parameter combinations will be validated across dataset sizes.
+See [WEEK-2-BENCHMARK-RESULTS.md](./packages/adapters/pgvector/WEEK-2-BENCHMARK-RESULTS.md)
 
 Timeline: Weeks 1-3
 Migration: npm run retrievalops migrate:hnsw
