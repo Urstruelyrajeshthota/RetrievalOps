@@ -1,41 +1,24 @@
 // Contracts for RetrievalOps
 // These interfaces define the core contracts that all adapters and providers must implement
 
-export interface AdapterCapabilities {
-  name: string;
-  version: string;
-  supportsDenseSearch: boolean;
-  supportsKeywordSearch: boolean;
-  supportsExactMatch: boolean;
-  supportsFiltering: boolean;
-  supportsBatch: boolean;
-  maxBatchSize?: number;
-}
-
-export interface SearchCandidate {
-  entityId: string;
-  field: string;
-  score: number;
-  metadata?: Record<string, unknown>;
-}
-
-export interface AdapterHealth {
-  healthy: boolean;
-  message?: string;
-}
-
-// Re-export adapter contracts
+// Adapter contracts (canonical — implemented by pgvector, qdrant, weaviate, milvus, opensearch)
 export type {
-  SearchAdapter,
+  Vector,
   IndexRequest,
   IndexResult,
   DenseSearchRequest,
   KeywordSearchRequest,
-  ExactMatchRequest,
+  SearchCandidate,
   DeleteRequest,
+  DeleteResult,
+  HealthStatus,
+  AdapterStats,
   BatchIndexRequest,
-  BatchDeleteRequest,
-} from './adapter';
+  BatchIndexResult,
+  AdapterCapabilities,
+  SearchAdapter,
+  SearchAdapterFactory,
+} from './search-adapter';
 
 export { createAdapterTestSuite, validateAdapterCompliance } from './adapter-test-suite';
 export type {
@@ -46,9 +29,14 @@ export type {
 
 export interface EmbeddingModelMetadata {
   name: string;
+  /**
+   * Model/provider version, stored with every vector for provenance and
+   * used to detect stale embeddings when the model changes.
+   */
+  version: string;
   dimensions: number;
-  pooling: 'mean' | 'cls';
-  metric: 'cosine' | 'l2' | 'ip';
+  pooling?: 'mean' | 'cls';
+  metric?: 'cosine' | 'l2' | 'ip';
   costPerMillionTokens?: number;
 }
 
@@ -57,6 +45,8 @@ export interface EmbeddingProvider {
   embedDocuments(texts: string[]): Promise<number[][]>;
   embedQuery(text: string): Promise<number[]>;
 }
+
+import type { SearchCandidate } from './search-adapter';
 
 export interface Reranker {
   rerank(

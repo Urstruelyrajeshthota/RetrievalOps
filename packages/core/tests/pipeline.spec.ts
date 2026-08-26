@@ -7,20 +7,28 @@ describe('RetrievalOps Pipeline', () => {
   let retrieval: RetrievalOps;
 
   const mockAdapter = {
-    capabilities: () => ({
-      name: 'MockAdapter',
-      version: '1.0.0',
-      supportsDenseSearch: true,
-      supportsKeywordSearch: true,
-      supportsExactMatch: false,
-      supportsFiltering: true,
-      supportsBatch: false,
+    getCapabilities: async () => ({
+      dense: true,
+      keyword: true,
+      hybrid: true,
+      nativeExplain: false,
+      multiTenant: true,
+      transactions: false,
+      filtering: true,
+      partitioning: false,
+      clustering: false,
     }),
-    index: async () => ({ success: true, indexed: true }),
+    getBackendType: () => 'postgresql' as const,
+    getVersion: () => '1.0.0',
+    index: async (req: any) => ({ success: true, vectorId: req.id }),
+    indexBatch: async () => ({ success: true, indexedCount: 0, failedCount: 0, results: [] }),
     denseSearch: async () => [],
     keywordSearch: async () => [],
-    delete: async () => {},
-    health: async () => ({ healthy: true }),
+    delete: async () => ({ success: true, deletedCount: 0 }),
+    health: async () => ({ healthy: true, status: 'healthy' as const, latencyMs: 1 }),
+    getStats: async () => ({ totalVectors: 0, storageUsed: 0, indexCount: 0, avgSearchLatencyMs: 0, queriesPerSecond: 0 }),
+    initialize: async () => {},
+    close: async () => {},
   };
 
   const mockEmbeddings = {

@@ -7,12 +7,10 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  SearchAdapter,
-  EmbeddingProvider,
-  Reranker,
-  QueryPlanner,
-  RetrievalPolicy,
-  AdapterCapabilities,
+  DenseSearchRequest,
+  KeywordSearchRequest,
+  SearchCandidate,
+  IndexRequest as AdapterIndexRequest,
 } from '@retrievalops/contracts';
 import {
   EntityDefinition,
@@ -25,10 +23,7 @@ import {
   SearchRequest,
   SearchResult,
   RankedResult,
-  ResultExplanation,
   MatchedField,
-  RetrievalPlan,
-  RetrievalTelemetry,
   RetrievalContext,
   DeleteRequest,
   RetrievalOpsConfig,
@@ -38,12 +33,10 @@ import {
   getGlobalRegistry,
 } from './registry';
 import {
-  RetrievalOpsError,
   EntityNotFoundError,
   MissingFieldError,
   ModelMismatchError,
   IndexError,
-  SearchError,
 } from './errors';
 import { Fusion } from './pipeline/fusion';
 
@@ -142,6 +135,13 @@ export class RetrievalOps {
       if (!this.embedderMeta) {
         this.embedderMeta = this.config.embeddings.metadata();
       }
+      const embedderMeta = this.embedderMeta;
+
+      // Metadata carried alongside every vector so it can be matched by
+      // tenantId/principalId/fieldFilters at search time. Includes tenant
+      // and permission values from the entity's security config, plus the
+      // raw value of every field marked for exact-match retrieval.
+      const filterMetadata = this.buildIndexMetadata(entity, doc, request.context);
 
       const indexedFields: string[] = [];
       let vectorCount = 0;
@@ -159,11 +159,11 @@ export class RetrievalOps {
           const vector = await this.config.embeddings.embedQuery(fieldValue);
 
           // Validate dimensions
-          if (vector.length !== this.embedderMeta.dimensions) {
+          if (vector.length !== embedderMeta.dimensions) {
             throw new ModelMismatchError(
-              this.embedderMeta.name,
-              this.embedderMeta.name,
-              this.embedderMeta.dimensions,
+              embedderMeta.name,
+              embedderMeta.name,
+              embedderMeta.dimensions,
               vector.length
             );
           }
@@ -171,19 +171,26 @@ export class RetrievalOps {
           // Compute content hash
           const contentHash = this.computeHash(fieldValue);
 
-          // Store in adapter
-          const storeResult = await this.config.store.index({
+          const adapterRequest: AdapterIndexRequest = {
+            id: uuidv4(),
             entityType: entity.name,
             entityId,
             field: fieldName,
             text: fieldValue,
             vector,
             contentHash,
-            embeddingModel: this.embedderMeta.name,
-            embeddingVersion: this.embedderMeta.version,
+            embeddingModel: embedderMeta.name,
+            embeddingVersion: embedderMeta.version,
             distanceMetric: 'cosine',
-            sourceUpdatedAt: new Date(),
-          } as any);
+            dimensions: vector.length,
+            weight: getFieldWeight(entity, fieldName),
+            retrievalStrategies: entity.fields[fieldName]?.retrieval,
+            metadata: filterMetadata,
+            createdAt: new Date(),
+          };
+
+          // Store in adapter
+          const storeResult = await this.config.store.index(adapterRequest);
 
           if (storeResult.success) {
             indexedFields.push(fieldName);
@@ -200,7 +207,7 @@ export class RetrievalOps {
         success: indexedFields.length > 0,
         indexedFields,
         vectorCount,
-        model: this.embedderMeta.name,
+        model: embedderMeta.name,
         durationMs,
       };
     } catch (error) {
@@ -217,6 +224,7 @@ export class RetrievalOps {
    */
   async search(request: SearchRequest): Promise<SearchResult> {
     const startTime = Date.now();
+    const strategyRequested = request.strategy || 'hybrid';
 
     try {
       // Validate entity exists
@@ -228,49 +236,145 @@ export class RetrievalOps {
       const topK = request.topK || 10;
       const context = request.context || {};
 
+      // Access control: ask the policy engine before running the search.
+      // RetrievalOps surfaces evidence; it does not decide access on its own.
+      if (this.config.policy) {
+        const decision = await this.config.policy.authorize({
+          entityType: entity.name,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
+          action: 'search',
+        });
+
+        if (!decision.allowed) {
+          const durationMs = Date.now() - startTime;
+          return {
+            results: [],
+            plan: {
+              strategy: strategyRequested,
+              candidateCount: 0,
+              usedDenseSearch: false,
+              usedKeywordSearch: false,
+              usedReranking: false,
+              description: `Access denied: ${decision.reason || 'not authorized'}`,
+            },
+            telemetry: {
+              latencyMs: durationMs,
+              candidateCount: 0,
+              returnedCount: 0,
+              embeddingModel: this.embedderMeta?.name || 'unknown',
+              adapter: this.config.store.getBackendType(),
+            },
+            success: false,
+            error: `Access denied: ${decision.reason || 'not authorized'}`,
+          };
+        }
+      }
+
       // Get embeddings metadata
       if (!this.embedderMeta) {
         this.embedderMeta = this.config.embeddings.metadata();
       }
+      const embedderMeta = this.embedderMeta;
 
       // Embed query
       const queryVector = await this.config.embeddings.embedQuery(request.query);
 
-      if (queryVector.length !== this.embedderMeta.dimensions) {
+      if (queryVector.length !== embedderMeta.dimensions) {
         throw new ModelMismatchError(
-          this.embedderMeta.name,
-          this.embedderMeta.name,
-          this.embedderMeta.dimensions,
+          embedderMeta.name,
+          embedderMeta.name,
+          embedderMeta.dimensions,
           queryVector.length
         );
       }
 
-      const strategy = request.strategy || 'hybrid';
-      let candidates = await this.executeStrategy(
-        strategy,
-        entity.name,
-        queryVector,
-        request.query,
-        topK
-      );
+      let strategy: string = strategyRequested;
 
-      // Deduplicate by entity
-      const dedupedCandidates = this.deduplicateByEntity(candidates);
-
-      // Apply field weighting
-      const weightedCandidates = this.applyFieldWeights(
-        dedupedCandidates,
-        entity
-      );
-
-      // Rerank if configured
-      if (this.config.reranker && weightedCandidates.length > 0) {
-        weightedCandidates.sort((a, b) => b.score - a.score);
+      // Let a configured query planner pick the strategy when the caller
+      // didn't explicitly request one.
+      if (this.config.planner && !request.strategy) {
+        try {
+          const plan = await this.config.planner.plan({
+            query: request.query,
+            entityType: entity.name,
+            context: context as Record<string, unknown>,
+          });
+          if (plan.strategy) {
+            strategy = plan.strategy;
+          }
+        } catch (error) {
+          console.error('Query planner failed, falling back to default strategy:', error);
+        }
       }
 
+      const denseStart = Date.now();
+      const { fused: candidates, denseResults, keywordResults, usedKeywordSearch } =
+        await this.executeStrategy(
+          strategy,
+          entity.name,
+          queryVector,
+          request.query,
+          topK,
+          context,
+          request.filters
+        );
+      const searchMs = Date.now() - denseStart;
+
+      // Preserve every field that matched per entity (across dense and
+      // keyword search) so the explanation can cite all matching evidence,
+      // not just whichever field happened to win the fused ranking.
+      const matchedFieldsByEntity = this.buildMatchedFieldsIndex(
+        denseResults,
+        keywordResults
+      );
+
+      // Deduplicate by entity (fused ranking already collapses per entity;
+      // this keeps the highest-ranked candidate as the representative row).
+      let workingCandidates = this.deduplicateByEntity(candidates);
+
+      // Apply field weighting
+      workingCandidates = this.applyFieldWeights(workingCandidates, entity);
+
+      // Policy-level document filtering (e.g. per-document ACLs). Applied
+      // after retrieval so the policy engine sees the actual candidate set.
+      if (this.config.policy) {
+        workingCandidates = (await this.config.policy.filter(
+          workingCandidates as SearchCandidate[],
+          context as RetrievalContext
+        )) as any[];
+      }
+
+      // Rerank if configured
+      let reranked = false;
+      const rerankStart = Date.now();
+      if (this.config.reranker && workingCandidates.length > 0) {
+        try {
+          const rerankedCandidates = await this.config.reranker.rerank(
+            request.query,
+            workingCandidates as SearchCandidate[]
+          );
+          workingCandidates = rerankedCandidates.map((c) => ({
+            ...c,
+            score: c.rerankScore ?? c.score,
+          }));
+          reranked = true;
+        } catch (error) {
+          console.error('Reranking failed, falling back to fused scores:', error);
+        }
+      }
+      const rerankingMs = this.config.reranker ? Date.now() - rerankStart : undefined;
+
+      workingCandidates.sort((a, b) => b.score - a.score);
+
       // Build ranked results
-      const results = weightedCandidates.slice(0, topK).map((c) =>
-        this.buildRankedResult(c, entity)
+      const results = workingCandidates.slice(0, topK).map((c) =>
+        this.buildRankedResult(
+          c,
+          entity,
+          matchedFieldsByEntity.get(c.entityId) || [],
+          reranked
+        )
       );
 
       const durationMs = Date.now() - startTime;
@@ -281,17 +385,20 @@ export class RetrievalOps {
           strategy,
           candidateCount: candidates.length,
           usedDenseSearch: true,
-          usedKeywordSearch: strategy === 'hybrid',
-          usedReranking: !!this.config.reranker,
-          fusionAlgorithm: strategy === 'hybrid' ? 'rrf' : undefined,
+          usedKeywordSearch,
+          usedReranking: reranked,
+          fusionAlgorithm: usedKeywordSearch ? this.config.hybrid?.fusion || 'rrf' : undefined,
           description: `Retrieved ${candidates.length} candidates, returned ${results.length}`,
         },
         telemetry: {
           latencyMs: durationMs,
           candidateCount: candidates.length,
           returnedCount: results.length,
-          embeddingModel: this.embedderMeta.name,
-          adapter: 'pgvector',
+          denseSearchMs: searchMs,
+          keywordSearchMs: usedKeywordSearch ? searchMs : undefined,
+          rerankingMs,
+          embeddingModel: embedderMeta.name,
+          adapter: this.config.store.getBackendType(),
         },
         success: true,
       };
@@ -302,7 +409,7 @@ export class RetrievalOps {
       return {
         results: [],
         plan: {
-          strategy: request.strategy || 'hybrid',
+          strategy: strategyRequested,
           candidateCount: 0,
           usedDenseSearch: false,
           usedKeywordSearch: false,
@@ -314,7 +421,7 @@ export class RetrievalOps {
           candidateCount: 0,
           returnedCount: 0,
           embeddingModel: this.embedderMeta?.name || 'unknown',
-          adapter: 'pgvector',
+          adapter: this.config.store.getBackendType?.() || 'unknown',
         },
         success: false,
         error: message,
@@ -340,71 +447,169 @@ export class RetrievalOps {
    * Check adapter health.
    */
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    return await this.config.store.health();
+    const status = await this.config.store.health();
+    return { healthy: status.healthy, message: status.status };
   }
 
   // Private methods
+
+  /**
+   * Build the metadata stored alongside every vector for a document.
+   * Carries tenant/principal scoping plus the raw value of any field
+   * marked "exact" so search-time filters can match against it.
+   */
+  private buildIndexMetadata(
+    entity: EntityDefinition,
+    doc: Record<string, unknown>,
+    context?: RetrievalContext
+  ): Record<string, unknown> {
+    const metadata: Record<string, unknown> = {};
+
+    const tenantId =
+      context?.tenantId ??
+      (entity.security?.tenantField ? doc[entity.security.tenantField] : undefined);
+    if (tenantId !== undefined) {
+      metadata.tenantId = tenantId;
+    }
+
+    if (entity.security?.permissionField) {
+      metadata.permittedPrincipals = doc[entity.security.permissionField];
+    }
+
+    for (const fieldName of getEmbeddableFields(entity, 'exact')) {
+      metadata[fieldName] = doc[fieldName];
+    }
+
+    return metadata;
+  }
 
   private async executeStrategy(
     strategy: string,
     entityType: string,
     queryVector: number[],
     queryText: string,
-    topK: number
-  ): Promise<any[]> {
+    topK: number,
+    context: RetrievalContext,
+    filters?: Record<string, unknown>
+  ): Promise<{
+    fused: SearchCandidate[];
+    denseResults: SearchCandidate[];
+    keywordResults: SearchCandidate[];
+    usedKeywordSearch: boolean;
+  }> {
     switch (strategy) {
-      case 'dense':
-        return await this.config.store.denseSearch({
-          entityType,
-          vector: queryVector,
-          topK,
-        } as any);
+      case 'dense': {
+        const denseResults = await this.config.store.denseSearch(
+          this.buildDenseSearchRequest(entityType, queryVector, topK, context, filters)
+        );
+        return { fused: denseResults, denseResults, keywordResults: [], usedKeywordSearch: false };
+      }
 
       case 'hybrid':
+      default:
         return await this.executeHybridSearch(
           entityType,
           queryVector,
           queryText,
-          topK
+          topK,
+          context,
+          filters
         );
-
-      default:
-        throw new SearchError(`Unknown strategy: ${strategy}`);
     }
+  }
+
+  private buildDenseSearchRequest(
+    entityType: string,
+    queryVector: number[],
+    topK: number,
+    context: RetrievalContext,
+    filters?: Record<string, unknown>
+  ): DenseSearchRequest {
+    return {
+      queryVector,
+      entityType,
+      topK,
+      fieldFilters: filters,
+      tenantId: context.tenantId,
+      principalId: context.principalId,
+    };
+  }
+
+  private buildKeywordSearchRequest(
+    entityType: string,
+    queryText: string,
+    topK: number,
+    context: RetrievalContext,
+    filters?: Record<string, unknown>
+  ): KeywordSearchRequest {
+    return {
+      query: queryText,
+      entityType,
+      topK,
+      fieldFilters: filters,
+      tenantId: context.tenantId,
+      principalId: context.principalId,
+    };
   }
 
   private async executeHybridSearch(
     entityType: string,
     queryVector: number[],
     queryText: string,
-    topK: number
-  ): Promise<any[]> {
-    const caps = this.config.store.capabilities();
+    topK: number,
+    context: RetrievalContext,
+    filters?: Record<string, unknown>
+  ): Promise<{
+    fused: SearchCandidate[];
+    denseResults: SearchCandidate[];
+    keywordResults: SearchCandidate[];
+    usedKeywordSearch: boolean;
+  }> {
+    const caps = await this.config.store.getCapabilities();
 
     // Dense search
-    const denseResults = await this.config.store.denseSearch({
-      entityType,
-      vector: queryVector,
-      topK,
-    } as any);
+    const denseResults = await this.config.store.denseSearch(
+      this.buildDenseSearchRequest(entityType, queryVector, topK, context, filters)
+    );
 
     // Keyword search (if supported)
-    let keywordResults: any[] = [];
-    if (caps.supportsKeywordSearch) {
-      keywordResults = await (this.config.store as any).keywordSearch({
-        entityType,
-        vector: queryVector,
-        topK,
-        query: queryText,
-      });
+    let keywordResults: SearchCandidate[] = [];
+    if (caps.keyword) {
+      keywordResults = await this.config.store.keywordSearch(
+        this.buildKeywordSearchRequest(entityType, queryText, topK, context, filters)
+      );
     }
 
     // Fuse results
-    if (keywordResults.length > 0) {
-      return this.fusion.rrf(denseResults, keywordResults);
-    }
+    const fused =
+      keywordResults.length > 0
+        ? this.fusion.rrf(denseResults, keywordResults)
+        : denseResults;
 
-    return denseResults;
+    return { fused, denseResults, keywordResults, usedKeywordSearch: keywordResults.length > 0 };
+  }
+
+  /**
+   * Group raw dense/keyword candidates by entity so an entity's
+   * explanation can cite every field that matched, not just the one
+   * field that happened to win the fused ranking.
+   */
+  private buildMatchedFieldsIndex(
+    denseResults: SearchCandidate[],
+    keywordResults: SearchCandidate[]
+  ): Map<string, MatchedField[]> {
+    const index = new Map<string, MatchedField[]>();
+
+    const add = (candidate: SearchCandidate, strategy: 'semantic' | 'keyword') => {
+      const list = index.get(candidate.entityId) || [];
+      list.push({ field: candidate.field, score: candidate.score, strategy });
+      index.set(candidate.entityId, list);
+    };
+
+    denseResults.forEach((c) => add(c, 'semantic'));
+    keywordResults.forEach((c) => add(c, 'keyword'));
+
+    return index;
   }
 
   private deduplicateByEntity(candidates: any[]): any[] {
@@ -431,8 +636,17 @@ export class RetrievalOps {
 
   private buildRankedResult(
     candidate: any,
-    entity: EntityDefinition
+    entity: EntityDefinition,
+    matchedFields: MatchedField[],
+    reranked: boolean
   ): RankedResult {
+    const fields = matchedFields.length > 0
+      ? matchedFields
+      : [{ field: candidate.field, score: candidate.score, strategy: 'semantic' as const }];
+
+    const strategies = Array.from(new Set(fields.map((f) => f.strategy)));
+    const fieldNames = Array.from(new Set(fields.map((f) => f.field)));
+
     return {
       id: candidate.entityId,
       entityType: entity.name,
@@ -440,19 +654,18 @@ export class RetrievalOps {
       document: candidate.metadata || {},
       explanation: {
         intent: this.detectIntent(candidate.field),
-        reason: `Matched field: ${candidate.field}`,
+        reason:
+          fieldNames.length > 1
+            ? `Matched fields: ${fieldNames.join(', ')} (${strategies.join(' + ')})`
+            : `Matched field: ${candidate.field}`,
         scores: {
-          dense: candidate.score,
+          dense: candidate.originalScores?.dense ?? candidate.score,
+          keyword: candidate.originalScores?.keyword ?? 0,
           final: candidate.score,
         },
-        matchedFields: [
-          {
-            field: candidate.field,
-            score: candidate.score,
-            strategy: 'semantic',
-          },
-        ],
-        strategy: 'hybrid',
+        matchedFields: fields,
+        reranked,
+        strategy: strategies.length > 1 ? 'hybrid' : strategies[0],
       },
       metadata: candidate.metadata,
     };

@@ -5,7 +5,7 @@
  * This ensures consistent behavior across all storage backends.
  */
 
-import { SearchAdapter, IndexRequest, DenseSearchRequest } from './adapter';
+import { SearchAdapter, IndexRequest, DenseSearchRequest } from './search-adapter';
 
 /**
  * Factory function that creates a test suite for an adapter.
@@ -28,6 +28,21 @@ export function createAdapterTestSuite(
 ) {
   const testName = options?.testName || 'Adapter Contract Tests';
 
+  const baseIndexRequest = (overrides: Partial<IndexRequest>): IndexRequest => ({
+    id: 'vec-1',
+    entityType: 'test_entity',
+    entityId: 'doc-1',
+    field: 'content',
+    text: 'This is a test document',
+    vector: Array(384).fill(0.1),
+    contentHash: 'abc123',
+    embeddingModel: 'test-model',
+    embeddingVersion: '1.0.0',
+    distanceMetric: 'cosine',
+    dimensions: 384,
+    ...overrides,
+  });
+
   return {
     describe: testName,
     tests: async () => {
@@ -48,11 +63,10 @@ export function createAdapterTestSuite(
 
       // Test 1: Capabilities
       it('should report adapter capabilities', async () => {
-        const caps = adapter.capabilities();
+        const caps = await adapter.getCapabilities();
         expect(caps).toBeDefined();
-        expect(caps.name).toBeDefined();
-        expect(caps.version).toBeDefined();
-        expect(caps.supportsDenseSearch).toBe(true); // Always required
+        expect(typeof caps.dense).toBe('boolean');
+        expect(caps.dense).toBe(true); // Dense search always required
       });
 
       // Test 2: Health check
@@ -64,45 +78,28 @@ export function createAdapterTestSuite(
 
       // Test 3: Index single document
       it('should index a document with embeddings', async () => {
-        const indexRequest: IndexRequest = {
-          entityType: 'test_entity',
-          entityId: 'doc-1',
-          field: 'content',
-          text: 'This is a test document',
-          vector: Array(384).fill(0.1), // Example 384-dim vector
-          contentHash: 'abc123',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        const indexRequest = baseIndexRequest({ id: 'vec-1', entityId: 'doc-1' });
 
         const result = await adapter.index(indexRequest);
         expect(result.success).toBe(true);
-        expect(result.indexed).toBe(true);
       });
 
       // Test 4: Retrieve indexed document
       it('should retrieve an indexed document via dense search', async () => {
         const vector = Array(384).fill(0.1);
-        const indexRequest: IndexRequest = {
-          entityType: 'test_entity',
+        const indexRequest = baseIndexRequest({
+          id: 'vec-2',
           entityId: 'doc-2',
-          field: 'content',
           text: 'Retrieval test document',
           vector,
           contentHash: 'def456',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        });
 
         await adapter.index(indexRequest);
 
         const searchRequest: DenseSearchRequest = {
+          queryVector: vector,
           entityType: 'test_entity',
-          vector,
           topK: 10,
         };
 
@@ -114,18 +111,12 @@ export function createAdapterTestSuite(
 
       // Test 5: Delete document
       it('should delete an indexed document', async () => {
-        const indexRequest: IndexRequest = {
-          entityType: 'test_entity',
+        const indexRequest = baseIndexRequest({
+          id: 'vec-3',
           entityId: 'doc-3',
-          field: 'content',
           text: 'Document to delete',
-          vector: Array(384).fill(0.1),
           contentHash: 'ghi789',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        });
 
         await adapter.index(indexRequest);
 
@@ -135,8 +126,8 @@ export function createAdapterTestSuite(
         });
 
         const searchRequest: DenseSearchRequest = {
+          queryVector: Array(384).fill(0.1),
           entityType: 'test_entity',
-          vector: Array(384).fill(0.1),
           topK: 10,
         };
 
@@ -147,59 +138,47 @@ export function createAdapterTestSuite(
 
       // Test 6: Keyword search (if supported)
       it('should support keyword search if capability is present', async () => {
-        const caps = adapter.capabilities();
-        if (!caps.supportsKeywordSearch) {
+        const caps = await adapter.getCapabilities();
+        if (!caps.keyword) {
           console.log('Skipping keyword search test: not supported');
           return;
         }
 
-        const indexRequest: IndexRequest = {
-          entityType: 'test_entity',
+        const indexRequest = baseIndexRequest({
+          id: 'vec-4',
           entityId: 'doc-4',
           field: 'title',
           text: 'Important keyword here',
-          vector: Array(384).fill(0.1),
           contentHash: 'jkl012',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        });
 
         await adapter.index(indexRequest);
 
-        if (adapter.keywordSearch) {
-          const results = await adapter.keywordSearch({
-            entityType: 'test_entity',
-            query: 'important keyword',
-            topK: 10,
-          });
+        const results = await adapter.keywordSearch({
+          entityType: 'test_entity',
+          query: 'important keyword',
+          topK: 10,
+        });
 
-          expect(Array.isArray(results)).toBe(true);
-          expect(results.length).toBeGreaterThan(0);
-        }
+        expect(Array.isArray(results)).toBe(true);
+        expect(results.length).toBeGreaterThan(0);
       });
 
       // Test 7: Score range validation
       it('should return scores in valid range [0, 1]', async () => {
-        const indexRequest: IndexRequest = {
-          entityType: 'test_entity',
+        const indexRequest = baseIndexRequest({
+          id: 'vec-5',
           entityId: 'doc-5',
-          field: 'content',
           text: 'Score validation test',
           vector: Array(384).fill(0.5),
           contentHash: 'mno345',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        });
 
         await adapter.index(indexRequest);
 
         const results = await adapter.denseSearch({
+          queryVector: Array(384).fill(0.5),
           entityType: 'test_entity',
-          vector: Array(384).fill(0.5),
           topK: 10,
         });
 
@@ -211,22 +190,15 @@ export function createAdapterTestSuite(
 
       // Test 8: Distance metric handling
       it('should respect distance metric configuration', async () => {
-        const caps = adapter.capabilities();
-
-        const vectorRequest: IndexRequest = {
-          entityType: 'test_entity',
+        const indexRequest = baseIndexRequest({
+          id: 'vec-6',
           entityId: 'doc-6',
-          field: 'content',
           text: 'Metric test',
           vector: Array(384).fill(0.5),
           contentHash: 'pqr678',
-          embeddingModel: 'test-model',
-          embeddingVersion: '1.0.0',
-          distanceMetric: 'cosine',
-          sourceUpdatedAt: new Date(),
-        };
+        });
 
-        const result = await adapter.index(vectorRequest);
+        const result = await adapter.index(indexRequest);
         expect(result.success).toBe(true);
       });
 
@@ -238,19 +210,58 @@ export function createAdapterTestSuite(
         };
 
         // Should not throw
-        await expect(adapter.delete(deleteRequest)).resolves.toBeUndefined();
+        await expect(adapter.delete(deleteRequest)).resolves.toBeDefined();
       });
 
       // Test 10: Empty search
       it('should return empty results for query with no matches', async () => {
         const results = await adapter.denseSearch({
+          queryVector: Array(384).fill(0),
           entityType: 'non-existent-type',
-          vector: Array(384).fill(0),
           topK: 10,
         });
 
         expect(Array.isArray(results)).toBe(true);
         expect(results.length).toBe(0);
+      });
+
+      // Test 11: Tenant/field filtering (if supported)
+      it('should scope results by tenantId when provided', async () => {
+        const caps = await adapter.getCapabilities();
+        if (!caps.multiTenant) {
+          console.log('Skipping tenant isolation test: not supported');
+          return;
+        }
+
+        const vector = Array(384).fill(0.3);
+
+        await adapter.index(
+          baseIndexRequest({
+            id: 'vec-tenant-a',
+            entityId: 'doc-tenant-a',
+            vector,
+            contentHash: 'tenant-a-hash',
+            metadata: { tenantId: 'tenant-a' },
+          })
+        );
+        await adapter.index(
+          baseIndexRequest({
+            id: 'vec-tenant-b',
+            entityId: 'doc-tenant-b',
+            vector,
+            contentHash: 'tenant-b-hash',
+            metadata: { tenantId: 'tenant-b' },
+          })
+        );
+
+        const results = await adapter.denseSearch({
+          queryVector: vector,
+          entityType: 'test_entity',
+          topK: 10,
+          tenantId: 'tenant-a',
+        });
+
+        expect(results.every((r) => r.entityId !== 'doc-tenant-b')).toBe(true);
       });
     },
   };
@@ -270,36 +281,50 @@ export interface AdapterTestOptions {
 export async function validateAdapterCompliance(
   adapter: SearchAdapter
 ): Promise<AdapterComplianceReport> {
-  const caps = adapter.capabilities();
+  const caps = await adapter.getCapabilities();
   const health = await adapter.health();
 
   const report: AdapterComplianceReport = {
-    name: caps.name,
-    version: caps.version,
+    backendType: adapter.getBackendType(),
+    version: adapter.getVersion(),
     healthy: health.healthy,
     capabilities: {
-      denseSearch: caps.supportsDenseSearch,
-      keywordSearch: caps.supportsKeywordSearch || false,
-      exactMatch: caps.supportsExactMatch || false,
-      filtering: caps.supportsFiltering || false,
-      batch: caps.supportsBatch || false,
+      denseSearch: caps.dense,
+      keywordSearch: caps.keyword,
+      hybrid: caps.hybrid,
+      filtering: caps.filtering,
+      multiTenant: caps.multiTenant,
     },
-    compliant: caps.supportsDenseSearch && health.healthy,
+    compliant: caps.dense && health.healthy,
   };
 
   return report;
 }
 
 export interface AdapterComplianceReport {
-  name: string;
+  backendType: string;
   version: string;
   healthy: boolean;
   capabilities: {
     denseSearch: boolean;
     keywordSearch: boolean;
-    exactMatch: boolean;
+    hybrid: boolean;
     filtering: boolean;
-    batch: boolean;
+    multiTenant: boolean;
   };
   compliant: boolean;
+}
+
+export interface AdapterTestContract {
+  describe: (name: string, fn: () => void) => void;
+  it: (name: string, fn: () => Promise<void>) => void;
+  before: (fn: () => Promise<void>) => void;
+  after: (fn: () => Promise<void>) => void;
+  beforeEach: (fn: () => Promise<void>) => void;
+  afterEach: (fn: () => Promise<void>) => void;
+}
+
+export interface AdapterTestFixture {
+  adapter: SearchAdapter;
+  cleanup: () => Promise<void>;
 }

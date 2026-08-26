@@ -5,6 +5,13 @@
  */
 
 import { EntityDefinition } from './entity';
+import type {
+  SearchAdapter,
+  EmbeddingProvider,
+  Reranker,
+  QueryPlanner,
+  RetrievalPolicy,
+} from '@retrievalops/contracts';
 
 /**
  * Context for retrieval operations (tenant, principal, metadata).
@@ -396,27 +403,34 @@ export interface RetrievalOpsConfig {
   /**
    * Search adapter (pgvector, qdrant, etc).
    */
-  store: any; // SearchAdapter from contracts
+  store: SearchAdapter;
 
   /**
    * Embedding provider (openai, local, gemini, etc).
    */
-  embeddings: any; // EmbeddingProvider from contracts
+  embeddings: EmbeddingProvider;
 
   /**
    * Optional: Reranker (cross-encoder, llm, etc).
    */
-  reranker?: any; // Reranker from contracts
+  reranker?: Reranker;
 
   /**
    * Optional: Policy engine for access control.
+   *
+   * When provided, authorize() gates the search before it runs and
+   * filter() is applied to candidates before ranking, so document-level
+   * access decisions are enforced by the policy engine rather than assumed.
    */
-  policy?: any; // RetrievalPolicy from contracts
+  policy?: RetrievalPolicy;
 
   /**
    * Optional: Query planner for intent detection.
+   *
+   * When provided, plan() may select the retrieval strategy for a query
+   * (e.g. dense vs hybrid) ahead of execution.
    */
-  planner?: any; // QueryPlanner from contracts
+  planner?: QueryPlanner;
 
   /**
    * Configuration for hybrid retrieval.

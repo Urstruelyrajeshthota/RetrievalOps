@@ -388,6 +388,11 @@ export interface SearchAdapter {
    * Backend version
    */
   getVersion(): string;
+
+  /**
+   * Reset adapter state. Optional; used by tests to clean up between runs.
+   */
+  reset?(): Promise<void>;
 }
 
 /**
