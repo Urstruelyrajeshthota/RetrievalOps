@@ -20,13 +20,16 @@
 
 **RetrievalOps** is the open control plane for enterprise-grade AI retrieval systems. It sits between your application and vector/search infrastructure, providing:
 
-- **Explainable retrieval** — Know exactly why results ranked
-- **Multi-field search** — Index and weight multiple fields differently
-- **Hybrid retrieval** — Combine dense (semantic) and keyword search via RRF
+- **Intent-aware retrieval** — Classify user goals like root-cause analysis, policy review, troubleshooting, or general search
+- **Decision-aware orchestration** — Route retrieval through policy-safe decision logic before execution
+- **Explainable evidence** — Understand why a document ranked and what signals drove the decision
+- **Policy-first enforcement** — Apply authorization and ACL checks before and after retrieval
+- **Swarm-ready execution** — Coordinate multiple specialized agents with deterministic consensus
+- **Hybrid and multi-field search** — Combine semantic, keyword, exact, and structured retrieval strategies
 - **No vendor lock-in** — Use with PostgreSQL, Qdrant, or self-hosted solutions
-- **Production-ready** — Type-safe, fully tested, observable
+- **Production-ready** — Type-safe, fully tested, observable, and policy bounded
 
-RetrievalOps helps applications plan, execute, evaluate, explain and govern retrieval across existing vector and search infrastructure.
+RetrievalOps helps applications plan, execute, evaluate, explain, and govern retrieval across existing vector and search infrastructure.
 
 **It works with your database. It does not replace it.**
 
@@ -51,14 +54,18 @@ RetrievalOps provides:
 
 | Problem | Solution |
 |---------|----------|
-| **What to embed?** | Entity schema DSL with field-level configuration |
-| **How to rank?** | Field weights (0.0-1.4+) for each field |
+| **What is the user trying to do?** | Intent compilation layer that classifies queries such as root cause, troubleshooting, policy review, or general retrieval |
+| **Which strategy should run?** | Decision-aware execution that selects the right retrieval path using a configurable decision provider |
+| **How do we keep authority safe?** | Policy-first authorization and document filtering before and after retrieval |
+| **What should we embed?** | Entity schema DSL with field-level configuration |
+| **How do we rank?** | Field weights (0.0-1.4+) and evidence-aware strategy planning |
 | **Dense + keyword?** | Native hybrid search with RRF fusion |
-| **Why ranked #1?** | Built-in result explanations |
-| **Multi-tenant?** | Tenant field isolation in schema |
-| **Safe rollouts?** | Versioned strategies, gradual rollout |
+| **Why ranked #1?** | Built-in result explanations and evidence traces |
+| **Multi-tenant?** | Tenant field isolation in schema plus policy gates |
+| **How do we coordinate multiple agents?** | Deterministic swarm planning with role selection and consensus scoring |
+| **Safe rollouts?** | Versioned strategies, gradual rollout, and policy-bounded execution |
 
-Use RetrievalOps inside your RAG framework (LlamaIndex, LangChain), or pair it with your own LLM integration.
+Use RetrievalOps inside your RAG framework (LlamaIndex, LangChain), or pair it with your own LLM integration. The framework is built for agentic systems that need explainability, controllability, and safety, not just raw vector similarity.
 
 ## 📊 When to Use RetrievalOps
 
@@ -163,23 +170,29 @@ console.log(result.results[0].explanation);
 
 ## ⚡ Key Features
 
-### Schema & Configuration
-- **Entity-aware embeddings** — Define which fields to embed and how to weight them
-- **Field weighting** — Control ranking importance per field (0.0 to 1.4+)
-- **Flexible strategies** — Semantic, keyword, or exact matching per field
-- **Security configuration** — Tenant isolation and permission enforcement
+### Intent & Decision Layers
+- **Intent compilation** — Classify query semantics such as root cause, policy check, troubleshooting, and general knowledge lookup
+- **Decision-aware strategy selection** — Choose the retrieval path based on task type, risk, and evidence requirements
+- **Jev-compatible decision adapters** — Plug in richer decision logic without bypassing policy safety
+- **Deterministic evaluation** — Evaluate task outcomes using stable scoring and evidence traces
 
-### Retrieval
+### Policy-Safe Retrieval
+- **Authorization-first enforcement** — Validate access before any retrieval execution
+- **Policy-aware filtering** — Re-check results against ACL or tenant constraints after candidate retrieval
+- **Permission-aware schemas** — Enforce tenant isolation and per-document access control
+- **Audit-friendly execution** — Keep decision provenance and policy context visible in the plan
+
+### Retrieval & Orchestration
 - **Hybrid retrieval** — Combine dense (semantic) + keyword search via RRF
-- **RRF fusion** — Reciprocal Rank Fusion for intelligent signal combination
-- **Score normalization** — All results on consistent [0, 1] scale
-- **Candidate deduplication** — Remove duplicates intelligently
+- **Multi-strategy execution** — Support semantic, keyword, exact, fallback, and policy-driven retrieval flows
+- **Swarm coordination** — Run multiple specialized agents with deterministic role assignment and consensus scoring
+- **Candidate deduplication** — Remove duplicates intelligently and keep evidence budgets bounded
 
 ### Observability
 - **Result explanations** — Deterministic why-did-this-rank-here answers
-- **Query-intent detection** — Classify queries (error, root_cause, solution, general)
-- **Telemetry** — Latency, candidate counts, strategy used
-- **Search plans** — Understand retrieval pipeline decisions
+- **Query-intent detection** — Classify queries (error, root_cause, policy_check, solution, general)
+- **Telemetry** — Latency, candidate counts, strategy used, and policy decisions
+- **Search plans** — Understand retrieval pipeline decisions, evidence sources, and routing choices
 
 ### Storage & Performance
 - **PostgreSQL + pgvector** — Scalable vector storage
@@ -193,40 +206,48 @@ console.log(result.results[0].explanation);
 - **No API keys** — Local embeddings (transformers.js)
 - **7 pre-configured models** — From fast to high-quality
 - **Comprehensive testing** — 195+ test cases
-- **Production-ready** — Observable, explainable, composable
+- **Production-ready** — Observable, explainable, policy-safe, and composable
 
 ## Architecture
 
 ```
-Application or Agent
+Application / Agent
         ↓
-   RetrievalOps Core
+Intent Compiler
         ↓
-Plan and Policy
+Decision Provider / Jev Adapter
         ↓
-Retrieval Pipeline
+Policy Gate
         ↓
-Search Adapters
+RetrievalOps Core
         ↓
-Existing Databases
+Strategy Planner + Swarm Coordination
+        ↓
+Search Adapters + Vector Stores
+        ↓
+Existing Databases / Indexes
 ```
 
 The retrieval pipeline follows:
 
-1. Validate access
-2. Classify query intent
-3. Construct retrieval plan
-4. Run dense, keyword, and exact searches
-5. Fuse candidates
-6. Deduplicate by parent entity
-7. Rerank
-8. Apply final policy checks
-9. Return results with evidence and telemetry
+1. Validate access and policy constraints
+2. Classify query intent and required evidence types
+3. Route through a decision provider or Jev-style evaluator
+4. Construct a retrieval plan with a bounded evidence budget
+5. Run dense, keyword, exact, and fallback searches
+6. Fuse candidates via hybrid ranking
+7. Deduplicate by parent entity and apply policy filtering
+8. Rerank and score final candidates
+9. Return results with explainability, telemetry, and policy provenance
+
+This design keeps the framework policy-safe and deterministic while still enabling agentic orchestration and intent-driven retrieval decisions.
 
 ## Packages
 
-- **@retrievalops/core** — Main SDK
-- **@retrievalops/contracts** — Type interfaces and specifications
+- **@retrievalops/core** — Main SDK with intent compilation, decision-aware planning, policy enforcement, and swarm orchestration
+- **@retrievalops/contracts** — Type interfaces and specifications for intents, policy, decisions, and retrieval contracts
+- **@retrievalops/decision** — Default decision and intent compiler implementations
+- **@retrievalops/jev** — Jev-aware decision adapters for richer reasoning workflows
 - **@retrievalops/evaluator** — Evaluation framework and metrics
 - **@retrievalops/observability** — OpenTelemetry integration
 - **@retrievalops/cli** — Command-line tools
@@ -376,4 +397,4 @@ See [GOVERNANCE.md](GOVERNANCE.md) for governance model and decision-making proc
 
 ---
 
-**RetrievalOps v0.1.0** is production-ready. Start with the [Quick Start](#quick-start) or see [examples/](examples/) for complete working demonstrations.
+**RetrievalOps v0.2.3** is production-ready and includes intent-aware retrieval, decision-aware orchestration, policy-safe execution, and swarm-ready agent coordination. Start with the [Quick Start](#quick-start) or see [examples/](examples/) for complete working demonstrations.
