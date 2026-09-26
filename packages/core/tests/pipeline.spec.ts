@@ -322,6 +322,98 @@ describe('RetrievalOps Pipeline', () => {
       expect(result.error).toContain('Access denied');
       expect(decisionCalled).toBe(false);
     });
+
+    it('should reject requests in enterprise mode when policy, tenant or principal context is missing', async () => {
+      resetGlobalRegistry();
+
+      const entity = defineEntity({
+        name: 'document',
+        id: 'id',
+        fields: {
+          id: { retrieval: ['exact'] },
+          title: { retrieval: ['semantic'] },
+        },
+      });
+
+      const adapted = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        security: {
+          mode: 'enterprise',
+          requirePolicy: true,
+          requireTenantContext: true,
+          requirePrincipalContext: true,
+          failClosed: true,
+        },
+      });
+
+      adapted.registerEntity(entity);
+
+      const result = await adapted.search({
+        entity,
+        query: 'Why did this fail?',
+        context: { tenantId: 'tenant-1' },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/principal|policy|tenant/i);
+    });
+
+    it('should clamp decision output to policy-safe strategies and evidence budgets', async () => {
+      resetGlobalRegistry();
+
+      const entity = defineEntity({
+        name: 'document',
+        id: 'id',
+        fields: {
+          id: { retrieval: ['exact'] },
+          title: { retrieval: ['semantic'] },
+        },
+      });
+
+      const adapted = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        security: {
+          mode: 'enterprise',
+          requirePolicy: true,
+          requireTenantContext: true,
+          requirePrincipalContext: true,
+          failClosed: true,
+        },
+        policy: {
+          authorize: async () => ({ allowed: true, reason: 'ok' }),
+          filter: async (candidates: any[]) => candidates,
+        },
+        decision: {
+          choose: async () => ({
+            selected: 'shadow',
+            selectedStrategy: 'shadow',
+            confidence: 0.99,
+            rationale: 'invalid strategy',
+            evidenceBudget: { maxDocuments: 9999, maxTokens: 999999 },
+            modelVersion: 'test-model',
+            requiresReview: true,
+          }),
+          score: async () => ({ score: 0.8, confidence: 0.8, reason: 'ok' }),
+          evaluate: async () => 0.8,
+        } as any,
+      });
+
+      adapted.registerEntity(entity);
+
+      const result = await adapted.search({
+        entity,
+        query: 'Why did this fail?',
+        context: { tenantId: 'tenant-1', principalId: 'user-1' },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.audit).toBeDefined();
+      expect(result.audit?.selectedStrategy).toMatch(/dense|hybrid|keyword/);
+      expect(result.audit?.evidenceBudget.maxDocuments).toBeLessThanOrEqual(12);
+      expect(result.audit?.evidenceBudget.maxTokens).toBeLessThanOrEqual(2400);
+    });
   });
 
   describe('Health Check', () => {

@@ -74,18 +74,18 @@ export class DefaultDecisionProvider implements DecisionProvider {
     const queryText = (state.query ?? '').toLowerCase();
     const riskDriven = /(risk|why|root cause|incident|breach|failure|policy)/i.test(queryText);
 
+    const allowed = normalizedOptions
+      .map((option) => option.value)
+      .filter((value) => ['dense', 'keyword', 'hybrid', 'exact'].includes(value));
+
     const preferred =
-      normalizedOptions.find((option) => option.value === 'hybrid')?.value ??
-      normalizedOptions.find((option) => option.value === 'dense')?.value ??
-      normalizedOptions.find((option) => option.value === 'keyword')?.value ??
-      normalizedOptions.find((option) => option.value === 'exact')?.value ??
-      normalizedOptions[0]?.value ??
+      allowed.includes('hybrid') ? 'hybrid' :
+      allowed.includes('dense') ? 'dense' :
+      allowed.includes('keyword') ? 'keyword' :
+      allowed.includes('exact') ? 'exact' :
       'hybrid';
 
-    const selected =
-      normalizedOptions.find((option) => option.value === state.task)?.value ??
-      (riskDriven ? preferred : preferred);
-
+    const selected = normalizedOptions.find((option) => option.value === state.task)?.value ?? preferred;
     const confidence = riskDriven ? 0.9 : 0.76;
     const evidenceBudget = {
       maxDocuments: riskDriven ? 12 : 8,

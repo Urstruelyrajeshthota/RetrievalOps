@@ -368,6 +368,26 @@ export interface SearchResult {
   telemetry: RetrievalTelemetry;
 
   /**
+   * Structured retriever audit record.
+   */
+  audit?: {
+    selectedStrategy: string;
+    allowedStrategies: string[];
+    evidenceBudget: {
+      maxDocuments: number;
+      maxTokens: number;
+    };
+    retrievedCandidateCount: number;
+    filteredCandidateCount: number;
+    authorizedEvidenceIds: string[];
+    policyVersion?: string;
+    intentCompilerVersion?: string;
+    decisionProviderVersion?: string;
+    tenantId?: string;
+    principalId?: string;
+  };
+
+  /**
    * Whether search succeeded.
    */
   success: boolean;
@@ -426,6 +446,17 @@ export interface RetrievalOpsConfig {
    * Search adapter (pgvector, qdrant, etc).
    */
   store: SearchAdapter;
+
+  /**
+   * Security mode and policy behavior.
+   */
+  security?: {
+    mode?: 'enterprise' | 'development';
+    requirePolicy?: boolean;
+    requireTenantContext?: boolean;
+    requirePrincipalContext?: boolean;
+    failClosed?: boolean;
+  };
 
   /**
    * Embedding provider (openai, local, gemini, etc).

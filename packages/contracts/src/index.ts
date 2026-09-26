@@ -109,6 +109,23 @@ export interface DecisionProvider {
   evaluate(state: DecisionContext, question: string): Promise<number>;
 }
 
+export interface RetrievalAuditTrace {
+  policyVersion?: string;
+  intentCompilerVersion?: string;
+  decisionProviderVersion?: string;
+  selectedStrategy: string;
+  allowedStrategies: string[];
+  evidenceBudget: {
+    maxDocuments: number;
+    maxTokens: number;
+  };
+  retrievedCandidateCount: number;
+  filteredCandidateCount: number;
+  authorizedEvidenceIds: string[];
+  tenantId?: string;
+  principalId?: string;
+}
+
 export interface IntentCompilationRequest {
   query: string;
   task?: string;

@@ -236,6 +236,54 @@ export class RetrievalOps {
       const topK = request.topK || 10;
       const context = request.context || {};
 
+      const securityMode = this.config.security?.mode ?? 'development';
+      const requirePolicy = this.config.security?.requirePolicy ?? securityMode === 'enterprise';
+      const requireTenantContext = this.config.security?.requireTenantContext ?? securityMode === 'enterprise';
+      const requirePrincipalContext = this.config.security?.requirePrincipalContext ?? securityMode === 'enterprise';
+      const failClosed = this.config.security?.failClosed ?? true;
+
+      if (securityMode === 'enterprise') {
+        if (requirePolicy && !this.config.policy) {
+          return this.failSearch(
+            startTime,
+            strategyRequested,
+            `Enterprise mode requires a policy engine before any embedding or retrieval.`,
+            securityMode,
+            context
+          );
+        }
+
+        if (requireTenantContext && !context.tenantId) {
+          return this.failSearch(
+            startTime,
+            strategyRequested,
+            'Enterprise mode requires tenant context before processing the request.',
+            securityMode,
+            context
+          );
+        }
+
+        if (requirePrincipalContext && !context.principalId) {
+          return this.failSearch(
+            startTime,
+            strategyRequested,
+            'Enterprise mode requires principal context before processing the request.',
+            securityMode,
+            context
+          );
+        }
+      }
+
+      if (failClosed && !this.config.policy && securityMode === 'enterprise') {
+        return this.failSearch(
+          startTime,
+          strategyRequested,
+          'Fail-closed security mode rejected the request because no policy engine was configured.',
+          securityMode,
+          context
+        );
+      }
+
       let intentProfile: {
         normalizedIntent?: string;
         retrievalStrategyHint?: string;
@@ -298,10 +346,17 @@ export class RetrievalOps {
 
       let decisionResult: {
         selected?: string;
+        selectedStrategy?: string;
         confidence?: number;
         reason?: string;
+        rationale?: string;
+        evidenceBudget?: { maxDocuments: number; maxTokens: number };
+        modelVersion?: string;
+        requiresReview?: boolean;
       } | null = null;
+
       if (this.config.decision) {
+        const allowedStrategies = ['dense', 'keyword', 'hybrid'];
         decisionResult = await this.config.decision.choose(
           {
             query: request.query,
@@ -311,16 +366,24 @@ export class RetrievalOps {
             principalId: context.principalId,
             userMetadata: context.userMetadata,
           },
-          [
-            { value: strategyRequested, label: strategyRequested },
-            { value: 'dense', label: 'dense' },
-            { value: 'keyword', label: 'keyword' },
-            { value: 'hybrid', label: 'hybrid' },
-          ]
+          allowedStrategies.map((value) => ({ value, label: value }))
         );
 
-        if (decisionResult?.selected && !request.strategy) {
-          strategyRequested = decisionResult.selected;
+        const normalizedSelected = decisionResult?.selectedStrategy ?? decisionResult?.selected ?? strategyRequested;
+        const safeSelected = allowedStrategies.includes(normalizedSelected) ? normalizedSelected : strategyRequested;
+        const clampedBudget = {
+          maxDocuments: Math.min(Math.max(decisionResult?.evidenceBudget?.maxDocuments ?? 12, 1), 12),
+          maxTokens: Math.min(Math.max(decisionResult?.evidenceBudget?.maxTokens ?? 2400, 256), 2400),
+        };
+
+        if (safeSelected && !request.strategy) {
+          strategyRequested = safeSelected;
+        }
+
+        if (decisionResult) {
+          decisionResult.selected = safeSelected;
+          decisionResult.selectedStrategy = safeSelected;
+          decisionResult.evidenceBudget = clampedBudget;
         }
       }
 
@@ -449,6 +512,10 @@ export class RetrievalOps {
       );
 
       const durationMs = Date.now() - startTime;
+      const finalBudget = {
+        maxDocuments: Math.min(Math.max(decisionResult?.evidenceBudget?.maxDocuments ?? 12, 1), 12),
+        maxTokens: Math.min(Math.max(decisionResult?.evidenceBudget?.maxTokens ?? 2400, 256), 2400),
+      };
 
       return {
         results,
@@ -474,6 +541,19 @@ export class RetrievalOps {
           rerankingMs,
           embeddingModel: embedderMeta.name,
           adapter: this.config.store.getBackendType(),
+        },
+        audit: {
+          selectedStrategy: strategy,
+          allowedStrategies: ['dense', 'keyword', 'hybrid'],
+          evidenceBudget: finalBudget,
+          retrievedCandidateCount: candidates.length,
+          filteredCandidateCount: Math.max(0, candidates.length - workingCandidates.length),
+          authorizedEvidenceIds: results.map((result) => result.id),
+          policyVersion: this.config.policy ? 'policy-v1' : undefined,
+          intentCompilerVersion: this.config.intentCompiler ? 'intent-v1' : undefined,
+          decisionProviderVersion: this.config.decision ? 'decision-v1' : undefined,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
         },
         success: true,
       };
@@ -757,6 +837,47 @@ export class RetrievalOps {
       return 'solution';
     }
     return 'general';
+  }
+
+  private failSearch(
+    startTime: number,
+    strategyRequested: string,
+    reason: string,
+    securityMode: string,
+    context: RetrievalContext
+  ): SearchResult {
+    const durationMs = Date.now() - startTime;
+    return {
+      results: [],
+      plan: {
+        strategy: strategyRequested,
+        candidateCount: 0,
+        usedDenseSearch: false,
+        usedKeywordSearch: false,
+        usedReranking: false,
+        description: `Security gate rejected the request: ${reason}`,
+      },
+      telemetry: {
+        latencyMs: durationMs,
+        candidateCount: 0,
+        returnedCount: 0,
+        embeddingModel: 'unknown',
+        adapter: this.config.store.getBackendType(),
+      },
+      audit: {
+        selectedStrategy: strategyRequested,
+        allowedStrategies: ['dense', 'keyword', 'hybrid'],
+        evidenceBudget: { maxDocuments: 0, maxTokens: 0 },
+        retrievedCandidateCount: 0,
+        filteredCandidateCount: 0,
+        authorizedEvidenceIds: [],
+        tenantId: context.tenantId,
+        principalId: context.principalId,
+        policyVersion: securityMode === 'enterprise' ? 'enterprise-policy' : undefined,
+      },
+      success: false,
+      error: reason,
+    };
   }
 
   private computeHash(text: string): string {
