@@ -1,6 +1,6 @@
 ﻿{
   "name": "@itsrajeshthota/retrievalops-qdrant",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Qdrant adapter for RetrievalOps",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",

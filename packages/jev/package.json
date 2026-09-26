@@ -1,6 +1,6 @@
 {
   "name": "@itsrajeshthota/retrievalops-jev",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Jev integration for RetrievalOps decision-aware retrieval",
   "license": "Apache-2.0",
   "author": "RetrievalOps Contributors",
