@@ -359,6 +359,73 @@ describe('RetrievalOps Pipeline', () => {
       expect(result.error).toMatch(/principal|policy|tenant/i);
     });
 
+    it('should emit audit metadata for denied authorization and failed decision paths', async () => {
+      resetGlobalRegistry();
+
+      const entity = defineEntity({
+        name: 'document',
+        id: 'id',
+        fields: {
+          id: { retrieval: ['exact'] },
+          title: { retrieval: ['semantic'] },
+        },
+      });
+
+      const policyDenied = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        policy: {
+          authorize: async () => ({ allowed: false, reason: 'tenant access denied' }),
+          filter: async (candidates: any[]) => candidates,
+        },
+      });
+
+      policyDenied.registerEntity(entity);
+
+      const deniedResult = await policyDenied.search({
+        entity,
+        query: 'What is blocked?',
+        context: { tenantId: 'tenant-1', principalId: 'user-2' },
+      });
+
+      expect(deniedResult.success).toBe(false);
+      expect(deniedResult.audit).toBeDefined();
+      expect(deniedResult.audit?.authorizedEvidenceIds).toEqual([]);
+      expect(deniedResult.audit?.tenantId).toBe('tenant-1');
+      expect(deniedResult.audit?.principalId).toBe('user-2');
+
+      resetGlobalRegistry();
+
+      const decisionFail = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        policy: {
+          authorize: async () => ({ allowed: true, reason: 'ok' }),
+          filter: async (candidates: any[]) => candidates,
+        },
+        decision: {
+          choose: async () => {
+            throw new Error('decision provider crashed');
+          },
+          score: async () => ({ score: 0.8, confidence: 0.8, reason: 'unused' }),
+          evaluate: async () => 0.8,
+        } as any,
+      });
+
+      decisionFail.registerEntity(entity);
+
+      const failedDecisionResult = await decisionFail.search({
+        entity,
+        query: 'Why did this fail?',
+        context: { tenantId: 'tenant-1', principalId: 'user-1' },
+      });
+
+      expect(failedDecisionResult.success).toBe(false);
+      expect(failedDecisionResult.audit).toBeDefined();
+      expect(failedDecisionResult.audit?.selectedStrategy).toMatch(/dense|hybrid|keyword/);
+      expect(failedDecisionResult.error).toMatch(/decision provider crashed|failed/i);
+    });
+
     it('should clamp decision output to policy-safe strategies and evidence budgets', async () => {
       resetGlobalRegistry();
 

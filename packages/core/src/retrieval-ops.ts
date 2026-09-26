@@ -321,6 +321,19 @@ export class RetrievalOps {
               embeddingModel: this.embedderMeta?.name || 'unknown',
               adapter: this.config.store.getBackendType(),
             },
+            audit: this.buildAuditTrace({
+              selectedStrategy: strategyRequested,
+              allowedStrategies: ['dense', 'keyword', 'hybrid'],
+              evidenceBudget: { maxDocuments: 0, maxTokens: 0 },
+              retrievedCandidateCount: 0,
+              filteredCandidateCount: 0,
+              authorizedEvidenceIds: [],
+              tenantId: context.tenantId,
+              principalId: context.principalId,
+              policyVersion: this.config.policy ? 'policy-v1' : undefined,
+              intentCompilerVersion: this.config.intentCompiler ? 'intent-v1' : undefined,
+              decisionProviderVersion: this.config.decision ? 'decision-v1' : undefined,
+            }),
             success: false,
             error: `Access denied: ${decision.reason || 'not authorized'}`,
           };
@@ -578,6 +591,19 @@ export class RetrievalOps {
           embeddingModel: this.embedderMeta?.name || 'unknown',
           adapter: this.config.store.getBackendType?.() || 'unknown',
         },
+        audit: this.buildAuditTrace({
+          selectedStrategy: strategyRequested,
+          allowedStrategies: ['dense', 'keyword', 'hybrid'],
+          evidenceBudget: { maxDocuments: 0, maxTokens: 0 },
+          retrievedCandidateCount: 0,
+          filteredCandidateCount: 0,
+          authorizedEvidenceIds: [],
+          tenantId: request.context?.tenantId,
+          principalId: request.context?.principalId,
+          policyVersion: this.config.policy ? 'policy-v1' : undefined,
+          intentCompilerVersion: this.config.intentCompiler ? 'intent-v1' : undefined,
+          decisionProviderVersion: this.config.decision ? 'decision-v1' : undefined,
+        }),
         success: false,
         error: message,
       };
@@ -864,7 +890,7 @@ export class RetrievalOps {
         embeddingModel: 'unknown',
         adapter: this.config.store.getBackendType(),
       },
-      audit: {
+      audit: this.buildAuditTrace({
         selectedStrategy: strategyRequested,
         allowedStrategies: ['dense', 'keyword', 'hybrid'],
         evidenceBudget: { maxDocuments: 0, maxTokens: 0 },
@@ -874,9 +900,37 @@ export class RetrievalOps {
         tenantId: context.tenantId,
         principalId: context.principalId,
         policyVersion: securityMode === 'enterprise' ? 'enterprise-policy' : undefined,
-      },
+      }),
       success: false,
       error: reason,
+    };
+  }
+
+  private buildAuditTrace(params: {
+    selectedStrategy: string;
+    allowedStrategies: string[];
+    evidenceBudget: { maxDocuments: number; maxTokens: number };
+    retrievedCandidateCount: number;
+    filteredCandidateCount: number;
+    authorizedEvidenceIds: string[];
+    tenantId?: string;
+    principalId?: string;
+    policyVersion?: string;
+    intentCompilerVersion?: string;
+    decisionProviderVersion?: string;
+  }) {
+    return {
+      selectedStrategy: params.selectedStrategy,
+      allowedStrategies: params.allowedStrategies,
+      evidenceBudget: params.evidenceBudget,
+      retrievedCandidateCount: params.retrievedCandidateCount,
+      filteredCandidateCount: params.filteredCandidateCount,
+      authorizedEvidenceIds: params.authorizedEvidenceIds,
+      tenantId: params.tenantId,
+      principalId: params.principalId,
+      policyVersion: params.policyVersion,
+      intentCompilerVersion: params.intentCompilerVersion,
+      decisionProviderVersion: params.decisionProviderVersion,
     };
   }
 
