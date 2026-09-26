@@ -305,41 +305,23 @@ See [examples/](examples/) for complete working examples:
 
 ## 📈 Performance & Metrics
 
-### v0.2.0 HNSW Performance (New!)
+### Benchmark note
 
-**v0.1.0 Baseline (IVFFlat)**
-- Search: 145ms
-- Recall: 0.92
-- Index size: 1.0x
-
-**v0.2.0 Achieved (HNSW m=16)**
-- Search: 35ms ⚡ **4.1x faster**
-- Recall: 0.95 ✨ **+3% better**
-- Index size: 1.2x (acceptable)
+The project includes optional HNSW tuning and retrieval optimizations, but benchmark figures should be treated as illustrative unless they are reproduced under a documented configuration (hardware, dataset size, dimensions, concurrency, and timing method).
 
 [Learn more →](./packages/adapters/pgvector/HNSW-TUNING.md)
 
-### Search Latency (Updated)
-| Operation | v0.1.0 | v0.2.0 | Improvement |
-|-----------|--------|--------|-------------|
-| Single document index | 60-120ms | 60-120ms | Same |
-| Single query search | 145ms | 35ms | **4.1x faster** |
-| Batch (6 documents) | 300-600ms | 300-600ms | Same |
-| Batch (5 queries) | 725ms | 175ms | **4.1x faster** |
-| Vector embedding | 20-40ms | 20-40ms | Same |
-| RRF fusion | 5-10ms | 5-10ms | Same |
-
 ### Quality Metrics
-- ✅ **195+ test cases** ensuring reliability
+- ✅ **195+ test cases** across core retrieval and orchestration paths
 - ✅ **100% TypeScript** with strict mode
 - ✅ **Type safety** for all APIs
-- ✅ **Code coverage** for critical paths
-- ✅ **Production-ready** - battle-tested
+- ✅ **Coverage** for critical retrieval and governance flows
+- ✅ **Production-oriented design** with policy boundaries and explainable execution
 
 ### Scale Characteristics
-- Tested with 1M+ vectors
-- Supports 100+ concurrent searches
-- Scales with PostgreSQL + pgvector
+- Designed for PostgreSQL + pgvector deployments
+- Supports concurrent search workloads with adaptive retrieval planning
+- Appropriate for multi-tenant and policy-constrained retrieval pipelines
 
 ## v0.2.3 Release Notes
 
@@ -361,16 +343,16 @@ How RetrievalOps compares to other solutions:
 
 | Feature | RetrievalOps | LlamaIndex | Pinecone | Qdrant |
 |---------|------------|-----------|----------|--------|
-| **Explainability** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐ |
-| **Field Weighting** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐ |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Hybrid Search** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **TypeScript** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Self-Hosted** | ✅ | ⚠️ | ❌ | ✅ |
-| **Performance** | ⚡⚡⚡ (v0.2.0 HNSW) | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **Cost** | 🆓 | 🆓* | 💰 | 🆓 |
+| **Explainability** | Strong | Limited | Limited | Limited |
+| **Field Weighting** | Native | Basic | Partial | Partial |
+| **Policy / ACL control** | Native | External | External | External |
+| **Hybrid Search** | Native | Common | Common | Common |
+| **TypeScript-first SDK** | Yes | Yes | Partial | Partial |
+| **Self-Hosted** | Yes | Often hybrid | No | Yes |
+| **Agent orchestration** | Built-in patterns | External | External | External |
+| **Cost model** | Low / self-hosted | Free + model costs | Paid | Low / self-hosted |
 
-*LlamaIndex is free, but API costs for embeddings/LLMs
+> This comparison is intentionally feature-oriented rather than subjective. See [COMPARISON.md](./COMPARISON.md) for the full analysis.
 
 👉 **[Full comparison →](./COMPARISON.md)**
 
@@ -430,4 +412,4 @@ See [GOVERNANCE.md](GOVERNANCE.md) for governance model and decision-making proc
 
 ---
 
-**RetrievalOps v0.2.3** is production-ready and includes intent-aware retrieval, decision-aware orchestration, policy-safe execution, and swarm-ready agent coordination. Start with the [Quick Start](#quick-start) or see [examples/](examples/) for complete working demonstrations.
+**RetrievalOps v0.2.3** is designed for production use and includes intent-aware retrieval, decision-aware orchestration, policy-safe execution, and swarm-ready agent coordination. Start with the [Quick Start](#quick-start) or see [examples/](examples/) for complete working demonstrations.
