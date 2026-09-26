@@ -11,6 +11,8 @@ import type {
   Reranker,
   QueryPlanner,
   RetrievalPolicy,
+  IntentCompiler,
+  DecisionProvider,
 } from '@retrievalops/contracts';
 
 /**
@@ -271,6 +273,26 @@ export interface RetrievalPlan {
   fusionAlgorithm?: string;
 
   /**
+   * Normalized task intent inferred by the intent compiler.
+   */
+  intent?: string;
+
+  /**
+   * Confidence of the decision layer selection.
+   */
+  decisionConfidence?: number;
+
+  /**
+   * Evidence-sufficiency score emitted by the decision layer.
+   */
+  evidenceSufficiency?: number;
+
+  /**
+   * Risk flags surfaced by the intent or decision layer.
+   */
+  riskFlags?: string[];
+
+  /**
    * Human-readable description.
    */
   description: string;
@@ -423,6 +445,16 @@ export interface RetrievalOpsConfig {
    * access decisions are enforced by the policy engine rather than assumed.
    */
   policy?: RetrievalPolicy;
+
+  /**
+   * Optional: Intent compiler that normalizes the user task and evidence needs.
+   */
+  intentCompiler?: IntentCompiler;
+
+  /**
+   * Optional: Decision provider for routing, scoring, and sufficiency checks.
+   */
+  decision?: DecisionProvider;
 
   /**
    * Optional: Query planner for intent detection.

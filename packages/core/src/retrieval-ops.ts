@@ -224,7 +224,7 @@ export class RetrievalOps {
    */
   async search(request: SearchRequest): Promise<SearchResult> {
     const startTime = Date.now();
-    const strategyRequested = request.strategy || 'hybrid';
+    let strategyRequested = request.strategy || 'hybrid';
 
     try {
       // Validate entity exists
@@ -235,6 +235,59 @@ export class RetrievalOps {
       const entity = request.entity;
       const topK = request.topK || 10;
       const context = request.context || {};
+
+      let intentProfile: {
+        normalizedIntent?: string;
+        retrievalStrategyHint?: string;
+        retrievalBudget?: { maxCandidates?: number; maxResults?: number };
+        confidence?: number;
+        riskFlags?: string[];
+      } | null = null;
+
+      if (this.config.intentCompiler) {
+        intentProfile = await this.config.intentCompiler.compile({
+          query: request.query,
+          task: request.query,
+          entityType: entity.name,
+          context: {
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            userMetadata: context.userMetadata,
+          },
+        });
+      }
+
+      if (intentProfile?.retrievalStrategyHint && !request.strategy) {
+        strategyRequested = intentProfile.retrievalStrategyHint;
+      }
+
+      let decisionResult: {
+        selected?: string;
+        confidence?: number;
+        reason?: string;
+      } | null = null;
+      if (this.config.decision) {
+        decisionResult = await this.config.decision.choose(
+          {
+            query: request.query,
+            task: request.query,
+            entityType: entity.name,
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            userMetadata: context.userMetadata,
+          },
+          [
+            { value: strategyRequested, label: strategyRequested },
+            { value: 'dense', label: 'dense' },
+            { value: 'keyword', label: 'keyword' },
+            { value: 'hybrid', label: 'hybrid' },
+          ]
+        );
+
+        if (decisionResult?.selected && !request.strategy) {
+          strategyRequested = decisionResult.selected;
+        }
+      }
 
       // Access control: ask the policy engine before running the search.
       // RetrievalOps surfaces evidence; it does not decide access on its own.
@@ -290,6 +343,24 @@ export class RetrievalOps {
       }
 
       let strategy: string = strategyRequested;
+      let decisionConfidence = decisionResult?.confidence ?? 0;
+      let evidenceSufficiency = 0;
+
+      if (this.config.decision) {
+        const scoreResult = await this.config.decision.score(
+          {
+            query: request.query,
+            task: request.query,
+            entityType: entity.name,
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            userMetadata: context.userMetadata,
+          },
+          ['semantic_alignment', 'entity_match', 'evidence_coverage']
+        );
+        decisionConfidence = scoreResult.confidence ?? decisionConfidence;
+        evidenceSufficiency = scoreResult.score ?? 0;
+      }
 
       // Let a configured query planner pick the strategy when the caller
       // didn't explicitly request one.
@@ -388,6 +459,10 @@ export class RetrievalOps {
           usedKeywordSearch,
           usedReranking: reranked,
           fusionAlgorithm: usedKeywordSearch ? this.config.hybrid?.fusion || 'rrf' : undefined,
+          intent: intentProfile?.normalizedIntent ?? undefined,
+          decisionConfidence,
+          evidenceSufficiency,
+          riskFlags: intentProfile?.riskFlags ?? undefined,
           description: `Retrieved ${candidates.length} candidates, returned ${results.length}`,
         },
         telemetry: {

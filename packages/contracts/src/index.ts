@@ -40,6 +40,86 @@ export interface EmbeddingModelMetadata {
   costPerMillionTokens?: number;
 }
 
+export type IntentTaskType =
+  | 'fact_lookup'
+  | 'root_cause'
+  | 'risk_assessment'
+  | 'policy_check'
+  | 'change_analysis'
+  | 'unknown';
+
+export interface DecisionContext {
+  query?: string;
+  task?: string;
+  entityType?: string;
+  tenantId?: string;
+  principalId?: string;
+  userMetadata?: Record<string, unknown>;
+  retrievedDocuments?: Array<Record<string, unknown>>;
+  constraints?: Record<string, unknown>;
+}
+
+export interface DecisionOption {
+  value: string;
+  label?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChoiceResult {
+  selected: string;
+  confidence: number;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ScoreResult {
+  score: number;
+  confidence: number;
+  breakdown?: Record<string, number>;
+  reason?: string;
+}
+
+export interface DecisionProvider {
+  choose(
+    state: DecisionContext,
+    options: DecisionOption[] | string[]
+  ): Promise<ChoiceResult>;
+  score(state: DecisionContext, rubric: string[]): Promise<ScoreResult>;
+  evaluate(state: DecisionContext, question: string): Promise<number>;
+}
+
+export interface IntentCompilationRequest {
+  query: string;
+  task?: string;
+  entityType?: string;
+  context?: {
+    tenantId?: string;
+    principalId?: string;
+    userMetadata?: Record<string, unknown>;
+    previousActions?: string[];
+  };
+}
+
+export interface IntentProfile {
+  normalizedIntent: string;
+  taskType: IntentTaskType;
+  requiredEvidenceTypes: string[];
+  retrievalStrategyHint: 'dense' | 'keyword' | 'hybrid' | 'multi_index' | 'none';
+  retrievalBudget: {
+    maxCandidates: number;
+    maxResults: number;
+    maxDepth?: number;
+  };
+  riskFlags: string[];
+  confidence: number;
+  deniesAccess?: boolean;
+  justification?: string;
+}
+
+export interface IntentCompiler {
+  compile(request: IntentCompilationRequest): Promise<IntentProfile>;
+}
+
 export interface EmbeddingProvider {
   metadata(): EmbeddingModelMetadata;
   embedDocuments(texts: string[]): Promise<number[][]>;

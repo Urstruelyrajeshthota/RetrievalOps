@@ -83,7 +83,7 @@ export class SearchAdapterFactory {
    * Automatically configures adapter from backend-specific env vars
    */
   async createFromEnv(typeVar = 'ADAPTER_TYPE'): Promise<SearchAdapter> {
-    const type = getAdapterTypeFromEnv();
+    const type = getAdapterTypeFromEnv(typeVar);
     const config = AdapterConfigs.fromEnv(type);
     return await this.create(type, config);
   }
@@ -131,12 +131,12 @@ export type AdapterType = 'postgresql' | 'qdrant' | 'weaviate' | 'milvus';
 /**
  * Environment-based adapter selection helper
  */
-export function getAdapterTypeFromEnv(): AdapterType {
-  const type = process.env.ADAPTER_TYPE?.toLowerCase() || 'postgresql';
+export function getAdapterTypeFromEnv(typeVar = 'ADAPTER_TYPE'): AdapterType {
+  const type = process.env[typeVar]?.toLowerCase() || 'postgresql';
 
   if (!['postgresql', 'qdrant', 'weaviate', 'milvus'].includes(type)) {
     throw new Error(
-      `Invalid ADAPTER_TYPE: ${type}. Must be 'postgresql', 'qdrant', 'weaviate', or 'milvus'`
+      `Invalid ${typeVar}: ${type}. Must be 'postgresql', 'qdrant', 'weaviate', or 'milvus'`
     );
   }
 

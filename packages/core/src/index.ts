@@ -55,6 +55,15 @@ export {
 
 // Pipeline utilities
 export { Fusion } from './pipeline/fusion';
+export { SimpleIntentCompiler, DefaultDecisionProvider, JevDecisionProvider } from './intelligence';
+export {
+  AgentSwarmForce,
+  type AgentSwarmDefinition,
+  type AgentSwarmExecutionResult,
+  type AgentSwarmOutcome,
+  type AgentSwarmPlan,
+  type AgentSwarmRequest,
+} from './swarm';
 export type { FusionConfig } from './pipeline/fusion';
 
 // Re-export contracts
@@ -68,4 +77,13 @@ export type {
   SearchCandidate,
   RankedCandidate,
   EmbeddingModelMetadata,
+  IntentCompiler,
+  IntentCompilationRequest,
+  IntentProfile,
+  DecisionProvider,
+  DecisionContext,
+  DecisionOption,
+  ChoiceResult,
+  ScoreResult,
+  IntentTaskType,
 } from '@retrievalops/contracts';

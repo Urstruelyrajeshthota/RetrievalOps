@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RetrievalOps } from '../src/retrieval-ops';
 import { defineEntity } from '../src/entity';
+import { resetGlobalRegistry } from '../src/registry';
 import { Fusion } from '../src/pipeline/fusion';
 
 describe('RetrievalOps Pipeline', () => {
@@ -43,6 +44,7 @@ describe('RetrievalOps Pipeline', () => {
   };
 
   beforeEach(() => {
+    resetGlobalRegistry();
     retrieval = new RetrievalOps({
       store: mockAdapter as any,
       embeddings: mockEmbeddings as any,
@@ -120,7 +122,7 @@ describe('RetrievalOps Pipeline', () => {
             // Missing id field
           },
         })
-      ).rejects.toThrow('required');
+      ).rejects.toThrow(/required/i);
     });
   });
 
@@ -216,6 +218,65 @@ describe('RetrievalOps Pipeline', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
+    });
+
+    it('should use intent compiler output to select strategy and record decision metadata', async () => {
+      resetGlobalRegistry();
+
+      const entity = defineEntity({
+        name: 'document',
+        id: 'id',
+        fields: {
+          id: { retrieval: ['exact'] },
+          title: { retrieval: ['semantic'] },
+        },
+      });
+
+      const decisionProvider = {
+        choose: async () => ({
+          selected: 'hybrid',
+          confidence: 0.91,
+          reason: 'needs both semantic and keyword signals',
+        }),
+        score: async () => ({
+          score: 0.84,
+          confidence: 0.9,
+          breakdown: { semantic: 0.8, keyword: 0.88 },
+        }),
+        evaluate: async () => 0.82,
+      };
+
+      const intentCompiler = {
+        compile: async () => ({
+          normalizedIntent: 'risk_assessment',
+          taskType: 'risk_assessment',
+          requiredEvidenceTypes: ['release_history', 'defect_log'],
+          retrievalStrategyHint: 'hybrid',
+          retrievalBudget: { maxCandidates: 25, maxResults: 5 },
+          riskFlags: ['release_risk'],
+          confidence: 0.9,
+        }),
+      };
+
+      const adapted = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        intentCompiler: intentCompiler as any,
+        decision: decisionProvider as any,
+      });
+
+      adapted.registerEntity(entity);
+
+      const result = await adapted.search({
+        entity,
+        query: 'Why is Release 24 at risk?',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.plan.strategy).toBe('hybrid');
+      expect(result.plan.intent).toBe('risk_assessment');
+      expect(result.plan.decisionConfidence).toBeGreaterThan(0);
+      expect(result.plan.evidenceSufficiency).toBeGreaterThanOrEqual(0);
     });
   });
 
