@@ -9,6 +9,20 @@ This release advances RetrievalOps from a simple retrieval orchestrator into an 
 - Added swarm-force coordination for multi-agent retrieval
 - Preserved policy-first enforcement in all execution paths
 - Expanded framework explainability with plan metadata and risk flags
+- Added fail-closed enterprise security defaults and audit metadata for rejected/failed searches
+- Hardened decision routing to clamp invalid strategies and oversized evidence budgets
+
+## Latest security hardening
+
+This patch strengthens the enterprise runtime in the following ways:
+
+- `RetrievalOps.search()` now validates policy, tenant, and principal requirements in enterprise mode before any retrieval or routing work begins.
+- Policy authorization is enforced before intent compilation and before the decision provider is invoked.
+- Decision outputs are normalized against the supported strategy set and bounded evidence budgets to prevent unsafe routing.
+- Both denied authorization and runtime decision failures now emit structured `audit` metadata so security investigations capture the full event path.
+- Search results and fail-closed responses contain consistent telemetry plus the selected strategy, evidence budget, and authorization context.
+
+These protections keep the intent and decision layers useful for orchestration without letting them override security guarantees.
 
 ## What’s new
 

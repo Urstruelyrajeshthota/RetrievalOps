@@ -25,10 +25,17 @@ RetrievalOps v0.2.3 introduces the intent-aware, decision-driven retrieval archi
 - Policy enforcement remains a hard gate before search execution.
 - The intent and decision layers augment routing and evidence selection but do not replace authorization or access control.
 
+### Latest security and audit fixes
+- Added enterprise fail-closed checks for missing policy, tenant, or principal context.
+- Enforced authorization before invoking decision providers.
+- Clamped invalid decision strategies and oversized evidence budgets to safe limits.
+- Recorded audit metadata for denied, failed, and security-rejected requests so investigations can trace the event path.
+- Kept denial and failure responses observable through structured search telemetry and audit records.
+
 ### Core improvements
 - Retrieval plans now include intent, decision confidence, evidence sufficiency, and risk flags.
 - Search execution is more explainable and better suited for operational agent workflows.
-- Regression coverage was expanded for the pipeline and agent swarm behavior.
+- Regression coverage was expanded for the pipeline, audit paths, and agent swarm behavior.
 
 ## Updated public APIs
 

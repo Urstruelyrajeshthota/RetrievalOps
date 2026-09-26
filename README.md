@@ -333,6 +333,18 @@ RetrievalOps v0.2.3 sharpens the framework around three independently testable r
 
 The HNSW default remains available for deployments that benefit from the improved vector index settings, but the release emphasis is on governance and decision quality rather than indexing alone.
 
+### Latest security and audit hardening
+
+The most recent runtime patch adds the following protections to the production control plane:
+
+- **Fail-closed enterprise mode** — requests are rejected when policy, tenant, or principal context is missing in enterprise security mode.
+- **Authorization before decisioning** — the policy engine is checked before the intent and decision providers can route a request.
+- **Safe strategy and budget clamping** — decision-provider outputs are normalized to supported retrieval strategies and bounded evidence budgets.
+- **Audit coverage for rejected paths** — denied authorization, enterprise fail-closed events, and decision failures now emit structured audit metadata for investigation.
+- **Policy-safe auditability** — the search plan and result telemetry include security and evidence context for triage and operations.
+
+> The current engineering roadmap still includes adapter-side ACL enforcement and benchmark publication for the broader enterprise rollout, but the core runtime and audit guarantees are now in place and covered by regression tests.
+
 > Benchmark figures should be interpreted with the dataset, hardware, dimensions, and concurrency noted in the reproducible benchmark logs. The numerical values shown in the matrix are illustrative unless accompanied by their full benchmark configuration.
 
 **Upgrading from v0.1.0?** See [Migration Guide](./packages/adapters/pgvector/MIGRATION-v0.1-to-v0.2.md)
