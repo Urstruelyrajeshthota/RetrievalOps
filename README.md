@@ -87,6 +87,7 @@ Use RetrievalOps inside your RAG framework (LlamaIndex, LangChain), or pair it w
 - **Code Search** — Semantic code search with keyword fallback
 - **E-commerce** — Product search combining specs + description + reviews
 - **Legal/Compliance** — Regulatory document search with audit trails
+- **Agentic Ops** — Route retrieval based on intent and policy constraints before executing search
 
 ## Quick Start
 
@@ -168,6 +169,27 @@ console.log(result.results[0].explanation);
 // }
 ```
 
+### Decision contract
+
+The decision layer returns inspectable routing metadata rather than unrestricted authority:
+
+```ts
+interface RetrievalDecision {
+  selected: string;
+  selectedStrategy?: string;
+  confidence: number;
+  rationale?: string;
+  evidenceBudget?: {
+    maxDocuments: number;
+    maxTokens: number;
+  };
+  modelVersion?: string;
+  requiresReview?: boolean;
+}
+```
+
+This contract is used for strategy selection and evidence budgeting, but it is constrained by the policy engine and must not override tenant isolation or ACL checks.
+
 ## ⚡ Key Features
 
 ### Intent & Decision Layers
@@ -211,34 +233,39 @@ console.log(result.results[0].explanation);
 ## Architecture
 
 ```
-Application / Agent
+Authenticated Agent / Application
+        ↓
+Policy Gate (tenant + principal + ACL checks)
         ↓
 Intent Compiler
         ↓
-Decision Provider / Jev Adapter
-        ↓
-Policy Gate
+Policy-constrained Decision Provider / Jev Adapter
         ↓
 RetrievalOps Core
         ↓
-Strategy Planner + Swarm Coordination
+Strategy Planner + Retrieval Budget
         ↓
-Search Adapters + Vector Stores
+Authorized Search Adapters + Vector Stores
         ↓
-Existing Databases / Indexes
+Post-retrieval ACL verification
+        ↓
+Evidence evaluation + explanation
+        ↓
+Approved results / agent context
 ```
 
 The retrieval pipeline follows:
 
-1. Validate access and policy constraints
-2. Classify query intent and required evidence types
-3. Route through a decision provider or Jev-style evaluator
-4. Construct a retrieval plan with a bounded evidence budget
-5. Run dense, keyword, exact, and fallback searches
-6. Fuse candidates via hybrid ranking
-7. Deduplicate by parent entity and apply policy filtering
-8. Rerank and score final candidates
-9. Return results with explainability, telemetry, and policy provenance
+1. Authenticate the caller and validate tenant/principal context
+2. Enforce authorization before any intent or decision processing
+3. Classify query intent and required evidence types
+4. Route through a decision provider or Jev-style evaluator under the policy constraints
+5. Construct a retrieval plan with a bounded evidence budget
+6. Run dense, keyword, exact, and fallback searches
+7. Fuse candidates via hybrid ranking
+8. Deduplicate by parent entity and apply policy filtering
+9. Rerank and score final candidates
+10. Return results with explainability, telemetry, and policy provenance
 
 This design keeps the framework policy-safe and deterministic while still enabling agentic orchestration and intent-driven retrieval decisions.
 
@@ -314,13 +341,17 @@ See [examples/](examples/) for complete working examples:
 - Supports 100+ concurrent searches
 - Scales with PostgreSQL + pgvector
 
-## v0.2.0 News: HNSW is Now Default 🚀
+## v0.2.3 Release Notes
 
-Starting with v0.2.0, **HNSW vector indexing is the default** for all new deployments. This delivers:
+RetrievalOps v0.2.3 sharpens the framework around three independently testable responsibilities:
 
-- **4.1x faster searches** (145ms → 35ms on 50K vectors)
-- **Better recall** (0.92 → 0.95)
-- **Automatic migration** (100% backward compatible)
+- **Policy enforcement** — authorize before execution and re-apply ACL constraints after retrieval
+- **Retrieval intelligence** — intent compilation, decision-aware routing, hybrid search, and evidence evaluation
+- **Agent coordination** — deterministic swarm planning with bounded evidence budgets and consensus scoring
+
+The HNSW default remains available for deployments that benefit from the improved vector index settings, but the release emphasis is on governance and decision quality rather than indexing alone.
+
+> Benchmark figures should be interpreted with the dataset, hardware, dimensions, and concurrency noted in the reproducible benchmark logs. The numerical values shown in the matrix are illustrative unless accompanied by their full benchmark configuration.
 
 **Upgrading from v0.1.0?** See [Migration Guide](./packages/adapters/pgvector/MIGRATION-v0.1-to-v0.2.md)
 
@@ -353,10 +384,12 @@ How RetrievalOps compares to other solutions:
 ### Setup
 
 ```bash
-git clone https://github.com/retrievalops/retrievalops.git
-cd retrievalops
+git clone https://github.com/Urstruelyrajeshthota/RetrievalOps.git
+cd RetrievalOps
 npm install
 ```
+
+> Local embeddings do not require an external API key. Optional hosted providers may still require one depending on the model selected.
 
 ### Local Services
 

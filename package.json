@@ -1,6 +1,6 @@
 {
   "name": "retrievalops-monorepo",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "private": true,
   "description": "The open control plane for reliable AI retrieval",
   "author": "RetrievalOps Contributors",

@@ -71,20 +71,36 @@ export class DefaultDecisionProvider implements DecisionProvider {
       ? options.map((option) => (typeof option === 'string' ? { value: option } : option))
       : [];
 
-    const selected =
-      normalizedOptions.find((option) => option.value === state.task)?.value ??
+    const queryText = (state.query ?? '').toLowerCase();
+    const riskDriven = /(risk|why|root cause|incident|breach|failure|policy)/i.test(queryText);
+
+    const preferred =
+      normalizedOptions.find((option) => option.value === 'hybrid')?.value ??
+      normalizedOptions.find((option) => option.value === 'dense')?.value ??
+      normalizedOptions.find((option) => option.value === 'keyword')?.value ??
+      normalizedOptions.find((option) => option.value === 'exact')?.value ??
       normalizedOptions[0]?.value ??
       'hybrid';
 
-    const queryText = (state.query ?? '').toLowerCase();
-    const confidence = /(risk|why|root cause|incident|breach|failure)/i.test(queryText)
-      ? 0.9
-      : 0.76;
+    const selected =
+      normalizedOptions.find((option) => option.value === state.task)?.value ??
+      (riskDriven ? preferred : preferred);
+
+    const confidence = riskDriven ? 0.9 : 0.76;
+    const evidenceBudget = {
+      maxDocuments: riskDriven ? 12 : 8,
+      maxTokens: riskDriven ? 2400 : 1800,
+    };
 
     return {
       selected,
+      selectedStrategy: selected,
       confidence,
       reason: `Selected strategy ${selected} based on task intent and evidence requirements.`,
+      rationale: `Selected strategy ${selected} based on task intent and evidence requirements.`,
+      evidenceBudget,
+      modelVersion: 'retrievalops-default',
+      requiresReview: riskDriven,
       metadata: {
         query: state.query,
         entityType: state.entityType,

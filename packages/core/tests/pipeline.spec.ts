@@ -278,6 +278,50 @@ describe('RetrievalOps Pipeline', () => {
       expect(result.plan.decisionConfidence).toBeGreaterThan(0);
       expect(result.plan.evidenceSufficiency).toBeGreaterThanOrEqual(0);
     });
+
+    it('should authorize before invoking the decision provider', async () => {
+      resetGlobalRegistry();
+
+      const entity = defineEntity({
+        name: 'document',
+        id: 'id',
+        fields: {
+          id: { retrieval: ['exact'] },
+          title: { retrieval: ['semantic'] },
+        },
+      });
+
+      let decisionCalled = false;
+
+      const adapted = new RetrievalOps({
+        store: mockAdapter as any,
+        embeddings: mockEmbeddings as any,
+        decision: {
+          choose: async () => {
+            decisionCalled = true;
+            return { selected: 'hybrid', confidence: 0.9, reason: 'should not run' };
+          },
+          score: async () => ({ score: 0.8, confidence: 0.8, reason: 'unused' }),
+          evaluate: async () => 0.8,
+        } as any,
+        policy: {
+          authorize: async () => ({ allowed: false, reason: 'tenant access denied' }),
+          filter: async (candidates: any[]) => candidates,
+        },
+      });
+
+      adapted.registerEntity(entity);
+
+      const result = await adapted.search({
+        entity,
+        query: 'Why did this fail?',
+        context: { tenantId: 'tenant-1', principalId: 'user-2' },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Access denied');
+      expect(decisionCalled).toBe(false);
+    });
   });
 
   describe('Health Check', () => {

@@ -244,6 +244,41 @@ export class RetrievalOps {
         riskFlags?: string[];
       } | null = null;
 
+      // Access control: authorize before intent compilation or strategy selection.
+      // RetrievalOps must never expose protected data to decision logic before a policy decision.
+      if (this.config.policy) {
+        const decision = await this.config.policy.authorize({
+          entityType: entity.name,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
+          action: 'search',
+        });
+
+        if (!decision.allowed) {
+          const durationMs = Date.now() - startTime;
+          return {
+            results: [],
+            plan: {
+              strategy: strategyRequested,
+              candidateCount: 0,
+              usedDenseSearch: false,
+              usedKeywordSearch: false,
+              usedReranking: false,
+              description: `Access denied: ${decision.reason || 'not authorized'}`,
+            },
+            telemetry: {
+              latencyMs: durationMs,
+              candidateCount: 0,
+              returnedCount: 0,
+              embeddingModel: this.embedderMeta?.name || 'unknown',
+              adapter: this.config.store.getBackendType(),
+            },
+            success: false,
+            error: `Access denied: ${decision.reason || 'not authorized'}`,
+          };
+        }
+      }
+
       if (this.config.intentCompiler) {
         intentProfile = await this.config.intentCompiler.compile({
           query: request.query,
@@ -286,41 +321,6 @@ export class RetrievalOps {
 
         if (decisionResult?.selected && !request.strategy) {
           strategyRequested = decisionResult.selected;
-        }
-      }
-
-      // Access control: ask the policy engine before running the search.
-      // RetrievalOps surfaces evidence; it does not decide access on its own.
-      if (this.config.policy) {
-        const decision = await this.config.policy.authorize({
-          entityType: entity.name,
-          tenantId: context.tenantId,
-          principalId: context.principalId,
-          action: 'search',
-        });
-
-        if (!decision.allowed) {
-          const durationMs = Date.now() - startTime;
-          return {
-            results: [],
-            plan: {
-              strategy: strategyRequested,
-              candidateCount: 0,
-              usedDenseSearch: false,
-              usedKeywordSearch: false,
-              usedReranking: false,
-              description: `Access denied: ${decision.reason || 'not authorized'}`,
-            },
-            telemetry: {
-              latencyMs: durationMs,
-              candidateCount: 0,
-              returnedCount: 0,
-              embeddingModel: this.embedderMeta?.name || 'unknown',
-              adapter: this.config.store.getBackendType(),
-            },
-            success: false,
-            error: `Access denied: ${decision.reason || 'not authorized'}`,
-          };
         }
       }
 

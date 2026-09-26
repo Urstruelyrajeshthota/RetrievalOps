@@ -67,9 +67,30 @@ export interface DecisionOption {
 
 export interface ChoiceResult {
   selected: string;
+  selectedStrategy?: string;
   confidence: number;
   reason?: string;
+  rationale?: string;
+  evidenceBudget?: {
+    maxDocuments: number;
+    maxTokens: number;
+  };
+  modelVersion?: string;
+  requiresReview?: boolean;
   metadata?: Record<string, unknown>;
+}
+
+export interface RetrievalDecision extends ChoiceResult {
+  selected: string;
+  selectedStrategy?: string;
+  confidence: number;
+  rationale?: string;
+  evidenceBudget?: {
+    maxDocuments: number;
+    maxTokens: number;
+  };
+  modelVersion?: string;
+  requiresReview?: boolean;
 }
 
 export interface ScoreResult {
@@ -83,7 +104,7 @@ export interface DecisionProvider {
   choose(
     state: DecisionContext,
     options: DecisionOption[] | string[]
-  ): Promise<ChoiceResult>;
+  ): Promise<RetrievalDecision>;
   score(state: DecisionContext, rubric: string[]): Promise<ScoreResult>;
   evaluate(state: DecisionContext, question: string): Promise<number>;
 }
